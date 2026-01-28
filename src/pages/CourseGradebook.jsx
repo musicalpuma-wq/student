@@ -227,7 +227,44 @@ export function CourseGradebook() {
             <ChevronLeft size={20} />
         </Link>
         <div>
-            <h1 style={{ fontSize: '2rem', marginBottom: '0.2rem' }}>{courseId}</h1>
+            {isEditingCourseName ? (
+                <form onSubmit={handleRenameCourse} style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <input 
+                        className="input-field"
+                        style={{ fontSize: '1.5rem', fontWeight: 700, padding: '4px 8px', width: '200px' }}
+                        value={newCourseName}
+                        onChange={(e) => setNewCourseName(e.target.value)}
+                        autoFocus
+                    />
+                    <button type="submit" className="btn" style={{ padding: '8px' }} title="Save Name">
+                        <Save size={18} />
+                    </button>
+                    <button 
+                        type="button" 
+                        className="btn btn-secondary" 
+                        style={{ padding: '8px' }}
+                        onClick={() => setIsEditingCourseName(false)}
+                        title="Cancel"
+                    >
+                        <ChevronLeft size={18} style={{ transform: 'rotate(180deg)' }} /> 
+                        {/* Using ChevronLeft rotated as a generic 'back/cancel' or X icon if imported */}
+                    </button>
+                </form>
+            ) : (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <h1 style={{ fontSize: '2rem', marginBottom: '0.2rem' }}>{courseId}</h1>
+                    <button 
+                        onClick={() => {
+                            setNewCourseName(courseId);
+                            setIsEditingCourseName(true);
+                        }}
+                        style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-text-secondary)', padding: '4px' }}
+                        title="Rename Course"
+                    >
+                        <Edit2 size={18} />
+                    </button>
+                </div>
+            )}
             <p style={{ color: 'var(--color-text-secondary)' }}>Course Management</p>
         </div>
       </div>
