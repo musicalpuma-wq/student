@@ -15,7 +15,10 @@ export function Sidebar() {
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `backup-${new Date().toISOString().split('T')[0]}.json`;
+      const now = new Date();
+      const dateStr = now.toISOString().split('T')[0];
+      const timeStr = now.toTimeString().split(' ')[0].replace(/:/g, '').substring(0, 4); // HHmm
+      a.download = `backup-${dateStr}-${timeStr}.json`;
       a.click();
   };
 
@@ -141,7 +144,7 @@ export function Sidebar() {
       <div style={{ marginTop: 'auto' }}>
         <div style={{ padding: '1rem', background: '#f5f5f7', borderRadius: 'var(--radius-md)' }}>
           <p style={{ fontSize: '0.8rem', color: '#86868b', fontWeight: 600 }}>Teacher</p>
-          <p style={{ fontSize: '0.9rem', fontWeight: 500 }}>John Doe</p>
+          <p style={{ fontSize: '0.9rem', fontWeight: 500 }}>Mauricio Herrera</p>
         </div>
       </div>
     </aside>

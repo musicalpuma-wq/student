@@ -1,26 +1,33 @@
 import { useState, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import { DataStore } from '../services/DataStore';
-import { Plus, Calendar, FileText, UserSquare2, ChevronLeft, Save, ArrowUpDown } from 'lucide-react';
+import { Plus, Calendar, FileText, UserSquare2, ChevronLeft, Save, ArrowUpDown, Mail, GripVertical, Edit2, ArrowRight } from 'lucide-react';
 
 export function CourseGradebook() {
   const { courseId } = useParams();
   const [students, setStudents] = useState([]);
   const [activities, setActivities] = useState([]);
-  const [activeTab, setActiveTab] = useState('grades'); // grades, attendance, observer
+  const [materials, setMaterials] = useState([]); // [{id, name}]
+  const [activeTab, setActiveTab] = useState('grades'); // grades, attendance, observer, materials
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
-  const [editingActivity, setEditingActivity] = useState(null); // { id, name, date, courseId }
+  const [editingMaterial, setEditingMaterial] = useState(null); // { id, name }
   const [newObservation, setNewObservation] = useState(null); // { studentId, studentName, date: '', note: '' }
   const [showAddDateModal, setShowAddDateModal] = useState(false);
   const [newAttendanceDate, setNewAttendanceDate] = useState(new Date().toISOString().split('T')[0]);
   const [sortConfig, setSortConfig] = useState({ key: 'name', direction: 'asc' });
   const [viewingStudent, setViewingStudent] = useState(null); // Student object to view details
+  const [isEditingStudent, setIsEditingStudent] = useState(false); // Toggle edit mode in modal
+  const [isEditingCourseName, setIsEditingCourseName] = useState(false);
+  const [newCourseName, setNewCourseName] = useState('');
+  const [editingActivity, setEditingActivity] = useState(null);
+  const navigate = useNavigate();
 
   useEffect(() => {
     // Load data
     setStudents(DataStore.getStudentsByCourse(courseId));
     setActivities(DataStore.getActivities(courseId));
+    setMaterials(DataStore.getMaterials(courseId));
   }, [courseId, refreshTrigger]);
 
   const refreshData = () => setRefreshTrigger(prev => prev + 1);
@@ -41,12 +48,23 @@ export function CourseGradebook() {
       let valA, valB;
 
       if (sortConfig.key === 'name') {
-        valA = a.name.toLowerCase();
-        valB = b.name.toLowerCase();
+        valA = (a.name || '').toLowerCase();
+        valB = (b.name || '').toLowerCase();
+      } else if (sortConfig.key === 'vps') {
+         // Try numeric sort if possible, else string
+         const vpsA = (a.vpsCode || '').replace(/\D/g, '');
+         const vpsB = (b.vpsCode || '').replace(/\D/g, '');
+         if (vpsA && vpsB) {
+             valA = parseInt(vpsA);
+             valB = parseInt(vpsB);
+         } else {
+             valA = a.vpsCode || '';
+             valB = b.vpsCode || '';
+         }
       } else {
         // Sorting by grade (activity ID)
-        valA = parseFloat(a.grades[sortConfig.key]) || -1; // Treat no grade as lowest
-        valB = parseFloat(b.grades[sortConfig.key]) || -1;
+        valA = parseFloat((a.grades || {})[sortConfig.key]) || -1; // Treat no grade as lowest
+        valB = parseFloat((b.grades || {})[sortConfig.key]) || -1;
       }
 
       if (valA < valB) return sortConfig.direction === 'asc' ? -1 : 1;
@@ -97,15 +115,32 @@ export function CourseGradebook() {
       }
   };
 
-  const deleteActivity = () => {
-      if (confirm('Are you sure you want to delete this activity? All grades for it will be lost.')) {
-          // Note: DataStore doesn't have deleteActivity yet, skipping for now or implementing if needed. 
-          // User didn't strictly ask for delete, but "modify" usually implies management. 
-          // Let's stick to modify for now to minimize scope creep unless easy.
-          // Actually, I'll just close the modal.
-          setEditingActivity(null);
-      }
-  }
+
+  // --- Materials Logic ---
+  const handleAddMaterial = () => {
+    const name = prompt("Enter Material/Column Name (e.g. Guitarra):");
+    if (name) {
+      DataStore.addMaterialColumn(courseId, name);
+      refreshData();
+    }
+  };
+
+  const handleMaterialValueChange = (student, materialId, value) => {
+      const updatedStudent = { 
+          ...student, 
+          materials: { ...(student.materials || {}), [materialId]: value } 
+      };
+      DataStore.updateStudent(updatedStudent);
+      setStudents(prev => prev.map(s => s.id === student.id ? updatedStudent : s));
+  };
+
+  const calculateStudentIndex = (studentId) => {
+      // Return 1-based index from the original unsorted list (or just count current view?)
+      // Requirement: "generar un número que numere a los estudiantes... siempre el de arriba va a ser el 1"
+      // This means the index depends on the Rendered Order.
+      // So detailed inside the map loop.
+      return 0; 
+  };
 
   const handleGradeChange = (student, activityId, value) => {
     // Clone student to update state immediately for UI responsiveness
@@ -117,10 +152,16 @@ export function CourseGradebook() {
   };
 
   const calculateAverage = (student) => {
-    const grades = Object.values(student.grades).map(v => parseFloat(v)).filter(v => !isNaN(v));
+    const grades = Object.values(student.grades || {}).map(v => parseFloat(v)).filter(v => !isNaN(v));
     if (grades.length === 0) return '-';
     const sum = grades.reduce((a, b) => a + b, 0);
     return (sum / grades.length).toFixed(1);
+  };
+
+  const canStudentPass = (student) => {
+    const avg = calculateAverage(student);
+    if (avg === '-') return true; 
+    return parseFloat(avg) >= 3.0;
   };
 
   // --- Attendance Logic ---
@@ -139,7 +180,45 @@ export function CourseGradebook() {
   };
 
   // --- Observer Logic ---
-  // addAnnotation replaced by modal logic below
+  const handleSendToParent = (student, note) => {
+      if (!student.parentEmail) {
+          alert('No parent email registered for this student.');
+          const text = `Student: ${student.name}\nObservation: ${note}`;
+          navigator.clipboard.writeText(text);
+          alert('Observation copied to clipboard instead.');
+          return;
+      }
+      
+      const subject = `Reporte de observación en clase de Música - ${student.name}`;
+      const body = `Este es un correo automático, por favor no responder\n\nApreciado acudiente:\n\nLe escribo para informarle sobre una anotación realizada en el observador del estudiante ${student.name} durante la clase de música:\n\n"${note}"\n\nComparto esta información con el ánimo de invitar a la reflexión en casa y trabajar conjuntamente en el proceso formativo del estudiante.\n\nCordialmente,\nMauricio Herrera\nProfesor de Música\nColegio Alfonso López Pumarejo`;
+      
+      // Copy to clipboard as fallback/convenience
+      navigator.clipboard.writeText(body);
+      
+      // Open Mailto
+      window.location.href = `mailto:${student.parentEmail}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+  };
+  
+  const handleUpdateStudentDetails = (e) => {
+      e.preventDefault();
+      if (viewingStudent) {
+          DataStore.updateStudent(viewingStudent);
+          setIsEditingStudent(false);
+          setStudents(prev => prev.map(s => s.id === viewingStudent.id ? viewingStudent : s));
+          refreshData(); // To update list view if name changed
+      }
+  };
+
+  const handleRenameCourse = (e) => {
+      e.preventDefault();
+      if (newCourseName && newCourseName !== courseId) {
+          DataStore.updateCourseName(courseId, newCourseName);
+          setIsEditingCourseName(false);
+          navigate(`/course/${newCourseName}`);
+      } else {
+          setIsEditingCourseName(false);
+      }
+  };
 
   return (
     <div>
@@ -194,6 +273,19 @@ export function CourseGradebook() {
             }}>
             Observer
         </button>
+        <button 
+            onClick={() => setActiveTab('materials')}
+            style={{ 
+                padding: '0.6rem 1.2rem', 
+                background: activeTab === 'materials' ? 'var(--color-accent)' : 'transparent',
+                color: activeTab === 'materials' ? 'white' : 'var(--color-text-secondary)',
+                borderRadius: '20px',
+                border: 'none',
+                fontWeight: 500,
+                cursor: 'pointer'
+            }}>
+            Materials Assignment
+        </button>
       </div>
 
       <div className="card" style={{ overflowX: 'auto', position: 'relative' }}>
@@ -201,6 +293,17 @@ export function CourseGradebook() {
             <table style={{ width: '100%', minWidth: '800px' }}>
                 <thead>
                     <tr>
+                        <th style={{ width: '50px', textAlign: 'center', color: '#86868b' }}>#</th>
+                        <th 
+                            style={{ width: '80px', cursor: 'pointer' }} 
+                            onClick={() => handleSort('vps')}
+                            className="hover-bg-gray"
+                        >
+                             <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                VPS
+                                <ArrowUpDown size={14} color={sortConfig.key === 'vps' ? 'var(--color-accent)' : '#ccc'} />
+                            </div>
+                        </th>
                         <th 
                             style={{ width: '250px', cursor: 'pointer' }}
                             onClick={() => handleSort('name')}
@@ -246,11 +349,13 @@ export function CourseGradebook() {
                     </tr>
                 </thead>
                 <tbody>
-                    {getSortedStudents().map(student => (
+                    {getSortedStudents().map((student, index) => (
                         <tr key={student.id}>
+                            <td style={{ textAlign: 'center', color: '#86868b', fontSize: '0.9rem' }}>{index + 1}</td>
+                            <td style={{ fontSize: '0.9rem', color: 'var(--color-text-secondary)' }}>{student.vpsCode}</td>
                             <td style={{ fontWeight: 500 }}>{student.name}</td>
                             {activities.map(act => {
-                                const grade = student.grades[act.id];
+                                const grade = (student.grades || {})[act.id];
                                 const numGrade = parseFloat(grade);
                                 let barColor = '#e5e5ea';
                                 let isGradient = false;
@@ -342,7 +447,25 @@ export function CourseGradebook() {
                 <table style={{ width: '100%', minWidth: '800px' }}>
                     <thead>
                         <tr>
-                            <th style={{ width: '250px' }}>Student Name</th>
+                            <th style={{ width: '50px', textAlign: 'center', color: '#86868b' }}>#</th>
+                            <th 
+                                style={{ width: '100px', cursor: 'pointer' }}
+                                onClick={() => handleSort('vps')}
+                            >
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                    VPS
+                                    {sortConfig.key === 'vps' && <ArrowUpDown size={14} />}
+                                </div>
+                            </th>
+                            <th 
+                                style={{ width: '250px', cursor: 'pointer' }}
+                                onClick={() => handleSort('name')}
+                            >
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                    Student Name
+                                    {sortConfig.key === 'name' && <ArrowUpDown size={14} />}
+                                </div>
+                            </th>
                             {/* Derive dates from all students' attendance records */}
                             {Array.from(new Set(students.flatMap(s => Object.keys(s.attendance || {})))).sort().map(date => (
                                 <th key={date} style={{ textAlign: 'center', minWidth: '50px' }}>
@@ -357,7 +480,7 @@ export function CourseGradebook() {
                         </tr>
                     </thead>
                     <tbody>
-                         {students.map(student => {
+                         {getSortedStudents().map(student => {
                              const dates = Array.from(new Set(students.flatMap(s => Object.keys(s.attendance || {})))).sort();
                              // Calculate totals
                              const counts = { present: 0, absent: 0, late: 0 };
@@ -367,6 +490,8 @@ export function CourseGradebook() {
 
                              return (
                                 <tr key={student.id}>
+                                    <td style={{ textAlign: 'center', color: '#86868b', fontSize: '0.9rem' }}>{calculateStudentIndex(student.id) || students.indexOf(student) + 1}</td>
+                                    <td style={{ fontSize: '0.9rem', color: 'var(--color-text-secondary)' }}>{student.vpsCode}</td>
                                     <td style={{ fontWeight: 500 }}>{student.name}</td>
                                     {dates.map(date => {
                                         const status = student.attendance?.[date] || 'present'; // Default assumption if column exists? Or null?
@@ -411,17 +536,83 @@ export function CourseGradebook() {
             </div>
         )}
 
+        {activeTab === 'materials' && (
+            <table style={{ width: '100%', minWidth: '800px' }}>
+                <thead>
+                    <tr>
+                         <th style={{ width: '50px', textAlign: 'center', color: '#86868b' }}>#</th>
+                         <th 
+                            style={{ width: '100px', cursor: 'pointer' }}
+                            onClick={() => handleSort('vps')}
+                         >
+                            VPS
+                         </th>
+                         <th 
+                            style={{ width: '250px', cursor: 'pointer' }}
+                            onClick={() => handleSort('name')}
+                         >
+                            Student Name
+                         </th>
+                         {materials.map(mat => (
+                             <th key={mat.id} style={{ minWidth: '150px' }}>
+                                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', justifyContent: 'center' }}>
+                                     {mat.name}
+                                     {/* Rename logic could go here */}
+                                 </div>
+                             </th>
+                         ))}
+                         <th style={{ width: '50px', padding: 0 }}>
+                            <button onClick={handleAddMaterial} style={{ 
+                                border: 'none', background: 'transparent', cursor: 'pointer', color: 'var(--color-accent)' 
+                            }}>
+                                <Plus size={20} />
+                            </button>
+                        </th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {getSortedStudents().map((student, index) => (
+                        <tr key={student.id}>
+                            <td style={{ textAlign: 'center', color: '#86868b' }}>{index + 1}</td>
+                            <td>{student.vpsCode}</td>
+                            <td style={{ fontWeight: 500 }}>{student.name}</td>
+                            {materials.map(mat => (
+                                <td key={mat.id} style={{ padding: '0.5rem' }}>
+                                    <input 
+                                        className="input-field"
+                                        style={{ width: '100%', fontSize: '0.9rem' }}
+                                        placeholder="Assign..."
+                                        value={student.materials?.[mat.id] || ''}
+                                        onChange={(e) => handleMaterialValueChange(student, mat.id, e.target.value)}
+                                    />
+                                </td>
+                            ))}
+                            <td></td>
+                        </tr>
+                    ))}
+                </tbody>
+            </table>
+        )}
+
         {activeTab === 'observer' && (
              <table>
                 <thead>
                     <tr>
-                        <th style={{ width: '200px' }}>Student Name</th>
+                        <th 
+                            style={{ width: '200px', cursor: 'pointer' }}
+                            onClick={() => handleSort('name')}
+                        >
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                Student Name
+                                {sortConfig.key === 'name' && <ArrowUpDown size={14} />}
+                            </div>
+                        </th>
                         <th>Observations</th>
                         <th style={{ width: '100px' }}>Action</th>
                     </tr>
                 </thead>
                 <tbody>
-                    {students.map(student => (
+                    {getSortedStudents().map(student => (
                         <tr key={student.id}>
                             <td style={{ fontWeight: 500, verticalAlign: 'top' }}>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
@@ -440,7 +631,31 @@ export function CourseGradebook() {
                                 {student.annotations && student.annotations.length > 0 ? (
                                     <ul style={{ paddingLeft: '1.2rem', margin: 0 }}>
                                         {student.annotations.map((note, i) => (
-                                            <li key={i} style={{ marginBottom: '0.5rem', fontSize: '0.9rem' }}>{note}</li>
+                                            <li key={i} style={{ marginBottom: '0.5rem', fontSize: '0.9rem' }}>
+                                                {note} 
+                                                <button 
+                                                    style={{ 
+                                                        marginLeft: '10px', 
+                                                        background: 'none', 
+                                                        border: '1px solid var(--color-border)', 
+                                                        borderRadius: '6px',
+                                                        cursor: 'pointer', 
+                                                        color: 'var(--color-text-primary)',
+                                                        display: 'inline-flex',
+                                                        alignItems: 'center',
+                                                        gap: '6px',
+                                                        padding: '4px 8px',
+                                                        fontSize: '0.8rem',
+                                                        fontWeight: 500
+                                                    }}
+                                                    title="Send to Parent via Email"
+                                                    onClick={() => handleSendToParent(student, note)}
+                                                >
+                                                    <Mail size={14} />
+                                                    Send to parent
+                                                    <ArrowRight size={14} />
+                                                </button>
+                                            </li>
                                         ))}
                                     </ul>
                                 ) : (
@@ -448,6 +663,7 @@ export function CourseGradebook() {
                                 )}
                             </td>
                             <td style={{ verticalAlign: 'top' }}>
+                                <div style={{ display: 'flex', gap: '0.5rem', flexDirection: 'column' }}>
                                 <button 
                                     onClick={() => setNewObservation({ 
                                         studentId: student.id, 
@@ -460,6 +676,7 @@ export function CourseGradebook() {
                                 >
                                     + Add Note
                                 </button>
+                                </div>
                             </td>
                         </tr>
                     ))}
@@ -621,54 +838,177 @@ export function CourseGradebook() {
             zIndex: 1000,
             backdropFilter: 'blur(5px)'
         }}>
-            <div className="card" style={{ width: '400px', padding: '2rem' }}>
-                <h3 style={{ marginBottom: '1.5rem', borderBottom: '1px solid #eee', paddingBottom: '0.5rem' }}>Student Details</h3>
+            <div className="card" style={{ width: '500px', padding: '2rem', maxHeight: '90vh', overflowY: 'auto' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', borderBottom: '1px solid #eee', paddingBottom: '0.5rem' }}>
+                    <h3 style={{ margin: 0 }}>Student Info</h3>
+                    <button 
+                        onClick={() => setIsEditingStudent(!isEditingStudent)}
+                        style={{ border: 'none', background: 'transparent', color: 'var(--color-accent)', cursor: 'pointer', fontWeight: 600 }}
+                    >
+                        {isEditingStudent ? 'Cancel Edit' : 'Edit'}
+                    </button>
+                </div>
                 
-                <div style={{ display: 'grid', gap: '1rem' }}>
-                    <div>
-                        <label style={{ fontSize: '0.85rem', color: 'var(--color-text-secondary)', fontWeight: 600 }}>FULL NAME</label>
-                        <p style={{ margin: 0, fontSize: '1.1rem', fontWeight: 500 }}>{viewingStudent.name}</p>
-                    </div>
+                {isEditingStudent ? (
+                    <form onSubmit={handleUpdateStudentDetails}>
+                        <div style={{ display: 'grid', gap: '1rem' }}>
+                            <div>
+                                <label style={{ fontSize: '0.85rem', color: 'var(--color-text-secondary)', fontWeight: 600 }}>FULL NAME</label>
+                                <input 
+                                    className="input-field" 
+                                    value={viewingStudent.name} 
+                                    onChange={e => setViewingStudent({...viewingStudent, name: e.target.value})}
+                                />
+                            </div>
 
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-                        <div>
-                             <label style={{ fontSize: '0.85rem', color: 'var(--color-text-secondary)', fontWeight: 600 }}>AGE</label>
-                             <p style={{ margin: 0 }}>{viewingStudent.age}</p>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                                <div>
+                                     <label style={{ fontSize: '0.85rem', color: 'var(--color-text-secondary)', fontWeight: 600 }}>AGE</label>
+                                     <input 
+                                        className="input-field" 
+                                        type="number"
+                                        value={viewingStudent.age} 
+                                        onChange={e => setViewingStudent({...viewingStudent, age: e.target.value})}
+                                    />
+                                </div>
+                                <div>
+                                     <label style={{ fontSize: '0.85rem', color: 'var(--color-text-secondary)', fontWeight: 600 }}>VPS CODE</label>
+                                     <input 
+                                        className="input-field" 
+                                        value={viewingStudent.vpsCode || ''} 
+                                        onChange={e => setViewingStudent({...viewingStudent, vpsCode: e.target.value})}
+                                    />
+                                </div>
+                            </div>
+
+                            <div>
+                                 <label style={{ fontSize: '0.85rem', color: 'var(--color-text-secondary)', fontWeight: 600 }}>JORNADA</label>
+                                 <select 
+                                     className="input-field" 
+                                     value={viewingStudent.jornada || 'Mañana'} 
+                                     onChange={e => setViewingStudent({...viewingStudent, jornada: e.target.value})}
+                                 >
+                                     <option value="Mañana">Mañana</option>
+                                     <option value="Tarde">Tarde</option>
+                                 </select>
+                            </div>
+
+                            <div>
+                                <label style={{ fontSize: '0.85rem', color: 'var(--color-text-secondary)', fontWeight: 600 }}>PARENT / GUARDIAN</label>
+                                <input 
+                                    className="input-field" 
+                                    value={viewingStudent.parentName} 
+                                    onChange={e => setViewingStudent({...viewingStudent, parentName: e.target.value})}
+                                />
+                            </div>
+
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                                <div>
+                                    <label style={{ fontSize: '0.85rem', color: 'var(--color-text-secondary)', fontWeight: 600 }}>PHONE</label>
+                                    <input 
+                                        className="input-field" 
+                                        value={viewingStudent.parentPhone} 
+                                        onChange={e => setViewingStudent({...viewingStudent, parentPhone: e.target.value})}
+                                    />
+                                </div>
+                                <div>
+                                    <label style={{ fontSize: '0.85rem', color: 'var(--color-text-secondary)', fontWeight: 600 }}>PHONE 2</label>
+                                    <input 
+                                        className="input-field" 
+                                        value={viewingStudent.parentPhone2 || ''} 
+                                        onChange={e => setViewingStudent({...viewingStudent, parentPhone2: e.target.value})}
+                                    />
+                                </div>
+                            </div>
+                            
+                            <div>
+                                <label style={{ fontSize: '0.85rem', color: 'var(--color-text-secondary)', fontWeight: 600 }}>EMAIL</label>
+                                <input 
+                                    className="input-field" 
+                                    type="email"
+                                    value={viewingStudent.parentEmail || ''} 
+                                    onChange={e => setViewingStudent({...viewingStudent, parentEmail: e.target.value})}
+                                />
+                            </div>
+
+                            <div>
+                                <label style={{ fontSize: '0.85rem', color: 'var(--color-text-secondary)', fontWeight: 600 }}>GENERAL OBSERVATIONS</label>
+                                <textarea 
+                                    className="input-field" 
+                                    rows="3"
+                                    value={viewingStudent.genericObs || ''} 
+                                    onChange={e => setViewingStudent({...viewingStudent, genericObs: e.target.value})}
+                                />
+                            </div>
                         </div>
+                        
+                        <div style={{ marginTop: '2rem', display: 'flex', justifyContent: 'flex-end', gap: '1rem' }}>
+                            <button type="button" className="btn btn-secondary" onClick={() => setIsEditingStudent(false)}>Cancel Edit</button>
+                            <button type="submit" className="btn">Save Changes</button>
+                        </div>
+                    </form>
+                ) : (
+                    <div style={{ display: 'grid', gap: '1rem' }}>
                         <div>
-                             <label style={{ fontSize: '0.85rem', color: 'var(--color-text-secondary)', fontWeight: 600 }}>VPS CODE</label>
-                             <p style={{ margin: 0 }}>{viewingStudent.vpsCode || '-'}</p>
+                            <label style={{ fontSize: '0.85rem', color: 'var(--color-text-secondary)', fontWeight: 600 }}>FULL NAME</label>
+                            <p style={{ margin: 0, fontSize: '1.1rem', fontWeight: 500 }}>{viewingStudent.name}</p>
+                        </div>
+
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                            <div>
+                                 <label style={{ fontSize: '0.85rem', color: 'var(--color-text-secondary)', fontWeight: 600 }}>AGE</label>
+                                 <p style={{ margin: 0 }}>{viewingStudent.age}</p>
+                            </div>
+                            <div>
+                                 <label style={{ fontSize: '0.85rem', color: 'var(--color-text-secondary)', fontWeight: 600 }}>VPS CODE</label>
+                                 <p style={{ margin: 0 }}>{viewingStudent.vpsCode || '-'}</p>
+                            </div>
+                        </div>
+
+                        <div>
+                             <label style={{ fontSize: '0.85rem', color: 'var(--color-text-secondary)', fontWeight: 600 }}>JORNADA</label>
+                             <p style={{ margin: 0 }}>{viewingStudent.jornada || 'Mañana'}</p>
+                        </div>
+
+                        <div>
+                            <label style={{ fontSize: '0.85rem', color: 'var(--color-text-secondary)', fontWeight: 600 }}>PARENT / GUARDIAN</label>
+                            <p style={{ margin: 0, fontWeight: 500 }}>{viewingStudent.parentName}</p>
+                        </div>
+
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                            <div>
+                                <label style={{ fontSize: '0.85rem', color: 'var(--color-text-secondary)', fontWeight: 600 }}>PHONE</label>
+                                <p style={{ margin: 0, color: 'var(--color-accent)' }}>{viewingStudent.parentPhone}</p>
+                            </div>
+                            {viewingStudent.parentPhone2 && (
+                                <div>
+                                    <label style={{ fontSize: '0.85rem', color: 'var(--color-text-secondary)', fontWeight: 600 }}>PHONE 2</label>
+                                    <p style={{ margin: 0 }}>{viewingStudent.parentPhone2}</p>
+                                </div>
+                            )}
+                        </div>
+                        
+                        {viewingStudent.parentEmail && (
+                            <div>
+                                <label style={{ fontSize: '0.85rem', color: 'var(--color-text-secondary)', fontWeight: 600 }}>EMAIL</label>
+                                <p style={{ margin: 0 }}>{viewingStudent.parentEmail}</p>
+                            </div>
+                        )}
+
+                        {viewingStudent.genericObs && (
+                            <div>
+                                <label style={{ fontSize: '0.85rem', color: 'var(--color-text-secondary)', fontWeight: 600 }}>GENERAL OBSERVATIONS</label>
+                                <p style={{ margin: 0, fontStyle: 'italic', background: '#f9f9f9', padding: '0.5rem', borderRadius: '6px' }}>
+                                    {viewingStudent.genericObs}
+                                </p>
+                            </div>
+                        )}
+                        
+                         <div style={{ marginTop: '2rem', display: 'flex', justifyContent: 'flex-end' }}>
+                            <button className="btn" onClick={() => setViewingStudent(null)}>Close</button>
                         </div>
                     </div>
-
-                    <div>
-                         <label style={{ fontSize: '0.85rem', color: 'var(--color-text-secondary)', fontWeight: 600 }}>JORNADA</label>
-                         <p style={{ margin: 0 }}>{viewingStudent.jornada || 'Mañana'}</p>
-                    </div>
-
-                    <div>
-                        <label style={{ fontSize: '0.85rem', color: 'var(--color-text-secondary)', fontWeight: 600 }}>PARENT / GUARDIAN</label>
-                        <p style={{ margin: 0, fontWeight: 500 }}>{viewingStudent.parentName}</p>
-                    </div>
-
-                    <div>
-                        <label style={{ fontSize: '0.85rem', color: 'var(--color-text-secondary)', fontWeight: 600 }}>CONTACT PHONE</label>
-                        <p style={{ margin: 0, color: 'var(--color-accent)' }}>{viewingStudent.parentPhone}</p>
-                    </div>
-
-                    {viewingStudent.genericObs && (
-                        <div>
-                            <label style={{ fontSize: '0.85rem', color: 'var(--color-text-secondary)', fontWeight: 600 }}>GENERAL OBSERVATIONS</label>
-                            <p style={{ margin: 0, fontStyle: 'italic', background: '#f9f9f9', padding: '0.5rem', borderRadius: '6px' }}>
-                                {viewingStudent.genericObs}
-                            </p>
-                        </div>
-                    )}
-                </div>
-
-                <div style={{ marginTop: '2rem', display: 'flex', justifyContent: 'flex-end' }}>
-                    <button className="btn" onClick={() => setViewingStudent(null)}>Close</button>
-                </div>
+                )}
             </div>
         </div>
       )}

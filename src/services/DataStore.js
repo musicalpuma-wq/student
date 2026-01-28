@@ -3,13 +3,17 @@ const STORAGE_KEY = 'sms_data_v1';
 const initialData = {
   students: [],
   activities: {}, // { courseId: [ { id, name, maxGrade } ] }
+  materials: {}, // { courseId: [ { id, name } ] }
 };
 
 export const DataStore = {
   // Load full state
   load: () => {
     const data = localStorage.getItem(STORAGE_KEY);
-    return data ? JSON.parse(data) : initialData;
+    const parsed = data ? JSON.parse(data) : initialData;
+    // Migration for existing data without materials
+    if (!parsed.materials) parsed.materials = {};
+    return parsed;
   },
 
   // Save full state
@@ -23,9 +27,30 @@ export const DataStore = {
     return data.students;
   },
 
+  // Helper to apply defaults
+  sanitizeStudent: (student) => {
+      const s = { ...student };
+      if (!s.name) s.name = "Pending";
+      if (!s.course) s.course = "Pending";
+      if (!s.age) s.age = 1;
+      if (!s.parentName) s.parentName = "Pending";
+      if (!s.parentPhone) s.parentPhone = "Pending";
+      if (!s.parentPhone2) s.parentPhone2 = "Pending";
+      if (!s.parentEmail) s.parentEmail = "pending@pending.co";
+      if (!s.vpsCode) s.vpsCode = "Pending"; // Optional but asked to fill text
+      // genericObs? "Pending" might be annoying if truly optional, but user said "if a student lacks data".
+      // I'll stick to the "Profile" fields.
+      if (!s.grades) s.grades = {};
+      if (!s.attendance) s.attendance = {};
+      if (!s.materials) s.materials = {};
+      if (!s.observations) s.observations = [];
+      return s;
+  },
+
   addStudent: (student) => {
     const data = DataStore.load();
-    const newStudent = { ...student, id: crypto.randomUUID(), grades: {}, attendance: {} };
+    const sanitized = DataStore.sanitizeStudent(student);
+    const newStudent = { ...sanitized, id: crypto.randomUUID(), grades: {}, attendance: {} };
     data.students.push(newStudent);
     DataStore.save(data);
     return newStudent;
@@ -35,7 +60,7 @@ export const DataStore = {
     const data = DataStore.load();
     const index = data.students.findIndex(s => s.id === updatedStudent.id);
     if (index !== -1) {
-      data.students[index] = updatedStudent;
+      data.students[index] = DataStore.sanitizeStudent(updatedStudent);
       DataStore.save(data);
     }
   },
@@ -48,7 +73,37 @@ export const DataStore = {
   },
 
   getStudentsByCourse: (course) => {
-    return DataStore.getStudents().filter(s => s.course === course);
+    return DataStore.getStudents().filter(s => s && s.course === course).map(s => DataStore.sanitizeStudent(s));
+  },
+
+  updateCourseName: (oldName, newName) => {
+    if (oldName === newName) return;
+    const data = DataStore.load();
+    
+    // 1. Update students
+    let changed = false;
+    data.students.forEach(s => {
+      if (s.course === oldName) {
+        s.course = newName;
+        changed = true;
+      }
+    });
+
+    // 2. Update activities key
+    if (data.activities[oldName]) {
+      data.activities[newName] = data.activities[oldName];
+      delete data.activities[oldName];
+      changed = true;
+    }
+
+    // 3. Update materials key
+    if (data.materials && data.materials[oldName]) {
+      data.materials[newName] = data.materials[oldName];
+      delete data.materials[oldName];
+      changed = true;
+    }
+
+    if (changed) DataStore.save(data);
   },
 
   // Activities
@@ -79,6 +134,24 @@ export const DataStore = {
        }
   },
 
+  // Materials
+  getMaterials: (course) => {
+    const data = DataStore.load();
+    return data.materials?.[course] || [];
+  },
+
+  addMaterialColumn: (course, materialName) => {
+    const data = DataStore.load();
+    if (!data.materials) data.materials = {};
+    if (!data.materials[course]) {
+      data.materials[course] = [];
+    }
+    const newMaterial = { id: crypto.randomUUID(), name: materialName };
+    data.materials[course].push(newMaterial);
+    DataStore.save(data);
+    return newMaterial;
+  },
+
   // Seed Data
   seedMockData: () => {
     const mockStudents = Array.from({ length: 50 }).map((_, i) => ({
@@ -88,9 +161,12 @@ export const DataStore = {
       age: 12 + (i % 3),
       parentName: `Parent ${i + 1}`,
       parentPhone: `555-00${i}`,
+      parentPhone2: `555-01${i}`,
+      parentEmail: `parent${i+1}@example.com`,
       vpsCode: `VPS${1000 + i}`,
       grades: {},
       attendance: {},
+      materials: {}, // { materialId: value }
       annotations: []
     }));
     

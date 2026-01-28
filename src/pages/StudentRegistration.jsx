@@ -10,7 +10,10 @@ export function StudentRegistration() {
     course: '',
     age: '',
     parentName: '',
+    parentName: '',
     parentPhone: '',
+    parentPhone2: '',
+    parentEmail: '',
     vpsCode: '',
     jornada: 'Mañana', // Default
     genericObs: ''
@@ -29,7 +32,10 @@ export function StudentRegistration() {
       course: '',
       age: '',
       parentName: '',
+      parentName: '',
       parentPhone: '',
+      parentPhone2: '',
+      parentEmail: '',
       vpsCode: '',
       jornada: 'Mañana',
       genericObs: ''
@@ -54,7 +60,6 @@ export function StudentRegistration() {
               placeholder="e.g. John Doe" 
               value={formData.name}
               onChange={handleChange}
-              required 
             />
           </div>
 
@@ -129,10 +134,34 @@ export function StudentRegistration() {
               <input 
                 className="input-field"
                 name="parentPhone" 
-                placeholder="Phone Number" 
+                placeholder="Primary Phone" 
                 value={formData.parentPhone}
                 onChange={handleChange}
-                required 
+              />
+            </div>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
+            <div style={{ display: 'grid', gap: '0.5rem' }}>
+              <label style={{ fontSize: '0.9rem', fontWeight: 500 }}>Parent Phone 2</label>
+              <input 
+                className="input-field"
+                name="parentPhone2" 
+                placeholder="Alternative Phone (Optional)" 
+                value={formData.parentPhone2}
+                onChange={handleChange}
+              />
+            </div>
+            
+            <div style={{ display: 'grid', gap: '0.5rem' }}>
+              <label style={{ fontSize: '0.9rem', fontWeight: 500 }}>Parent Email</label>
+              <input 
+                className="input-field"
+                name="parentEmail" 
+                type="email"
+                placeholder="parent@example.com (Optional)" 
+                value={formData.parentEmail}
+                onChange={handleChange}
               />
             </div>
           </div>
