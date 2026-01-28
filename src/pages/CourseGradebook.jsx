@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { DataStore } from '../services/DataStore';
-import { Plus, Calendar, FileText, UserSquare2, ChevronLeft, Save, ArrowUpDown, Mail, GripVertical, Edit2, ArrowRight } from 'lucide-react';
+import { Plus, Calendar, FileText, UserSquare2, ChevronLeft, Save, ArrowUpDown, Mail, GripVertical, Edit2, ArrowRight, Trash2 } from 'lucide-react';
 
 export function CourseGradebook() {
   const { courseId } = useParams();
@@ -29,6 +29,16 @@ export function CourseGradebook() {
     setActivities(DataStore.getActivities(courseId));
     setMaterials(DataStore.getMaterials(courseId));
   }, [courseId, refreshTrigger]);
+
+  /* Helper to parse "date note" format */
+  const parseObservation = (obsString) => {
+    // Expected format: "[2025-01-28] content..."
+    const match = obsString.match(/^\[(.*?)]\s*(.*)$/);
+    if (match) {
+      return { date: match[1], note: match[2] };
+    }
+    return { date: '', note: obsString };
+  };
 
   const refreshData = () => setRefreshTrigger(prev => prev + 1);
 
@@ -103,15 +113,50 @@ export function CourseGradebook() {
           if (student) {
              const dateStr = newObservation.date || new Date().toISOString().split('T')[0];
              const newAnnotation = `[${dateStr}] ${newObservation.note}`;
+             
+             let updatedAnnotations = [...(student.annotations || [])];
+             
+             if (newObservation.index !== undefined && newObservation.index !== null) {
+                 // Edit existing
+                 updatedAnnotations[newObservation.index] = newAnnotation;
+             } else {
+                 // Add new
+                 updatedAnnotations.push(newAnnotation);
+             }
+
              const updatedStudent = { 
                   ...student, 
-                  annotations: [...(student.annotations || []), newAnnotation]
+                  annotations: updatedAnnotations
               };
               DataStore.updateStudent(updatedStudent);
               // Update local state
               setStudents(prev => prev.map(s => s.id === student.id ? updatedStudent : s));
           }
           setNewObservation(null);
+      }
+  };
+
+  const handleEditObservation = (student, index) => {
+      const obsString = student.annotations[index];
+      const parsed = parseObservation(obsString);
+      setNewObservation({
+          studentId: student.id,
+          studentName: student.name,
+          date: parsed.date,
+          note: parsed.note,
+          index: index // Track index for updating
+      });
+  };
+
+  const handleDeleteObservation = (student, index) => {
+      if (window.confirm("Are you sure you want to delete this observation?")) {
+          const updatedAnnotations = student.annotations.filter((_, i) => i !== index);
+          const updatedStudent = { 
+              ...student, 
+              annotations: updatedAnnotations 
+          };
+          DataStore.updateStudent(updatedStudent);
+          setStudents(prev => prev.map(s => s.id === student.id ? updatedStudent : s));
       }
   };
 
@@ -669,29 +714,57 @@ export function CourseGradebook() {
                                     <ul style={{ paddingLeft: '1.2rem', margin: 0 }}>
                                         {student.annotations.map((note, i) => (
                                             <li key={i} style={{ marginBottom: '0.5rem', fontSize: '0.9rem' }}>
-                                                {note} 
-                                                <button 
-                                                    style={{ 
-                                                        marginLeft: '10px', 
-                                                        background: 'none', 
-                                                        border: '1px solid var(--color-border)', 
-                                                        borderRadius: '6px',
-                                                        cursor: 'pointer', 
-                                                        color: 'var(--color-text-primary)',
-                                                        display: 'inline-flex',
-                                                        alignItems: 'center',
-                                                        gap: '6px',
-                                                        padding: '4px 8px',
-                                                        fontSize: '0.8rem',
-                                                        fontWeight: 500
-                                                    }}
-                                                    title="Send to Parent via Email"
-                                                    onClick={() => handleSendToParent(student, note)}
-                                                >
-                                                    <Mail size={14} />
-                                                    Send to parent
-                                                    <ArrowRight size={14} />
-                                                </button>
+                                                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '10px' }}>
+                                                    <span>{note}</span>
+                                                    <div style={{ display: 'flex', gap: '4px', flexShrink: 0 }}>
+                                                        <button 
+                                                            style={{ 
+                                                                background: 'none', 
+                                                                border: 'none', 
+                                                                cursor: 'pointer', 
+                                                                color: 'var(--color-text-secondary)',
+                                                                padding: '4px'
+                                                            }}
+                                                            title="Edit"
+                                                            onClick={() => handleEditObservation(student, i)}
+                                                        >
+                                                            <Edit2 size={14} />
+                                                        </button>
+                                                         <button 
+                                                            style={{ 
+                                                                background: 'none', 
+                                                                border: 'none', 
+                                                                cursor: 'pointer', 
+                                                                color: 'var(--color-danger)',
+                                                                padding: '4px'
+                                                            }}
+                                                            title="Delete"
+                                                            onClick={() => handleDeleteObservation(student, i)}
+                                                        >
+                                                            <Trash2 size={14} />
+                                                        </button>
+                                                        <button 
+                                                            style={{ 
+                                                                background: 'none', 
+                                                                border: '1px solid var(--color-border)', 
+                                                                borderRadius: '6px',
+                                                                cursor: 'pointer', 
+                                                                color: 'var(--color-text-primary)',
+                                                                display: 'inline-flex',
+                                                                alignItems: 'center',
+                                                                gap: '6px',
+                                                                padding: '4px 8px',
+                                                                fontSize: '0.8rem',
+                                                                fontWeight: 500,
+                                                                marginLeft: '4px'
+                                                            }}
+                                                            title="Send to Parent via Email"
+                                                            onClick={() => handleSendToParent(student, note)}
+                                                        >
+                                                            <Mail size={14} />
+                                                        </button>
+                                                    </div>
+                                                </div>
                                             </li>
                                         ))}
                                     </ul>
@@ -777,7 +850,9 @@ export function CourseGradebook() {
             backdropFilter: 'blur(5px)'
         }}>
             <div className="card" style={{ width: '400px', padding: '2rem' }}>
-                <h3 style={{ marginBottom: '0.5rem' }}>New Observation</h3>
+                <h3 style={{ marginBottom: '0.5rem' }}>
+                    {newObservation.index !== undefined ? 'Edit Observation' : 'New Observation'}
+                </h3>
                 <p style={{ marginBottom: '1.5rem', color: 'var(--color-text-secondary)' }}>For {newObservation.studentName}</p>
                 
                 <form onSubmit={handleSaveObservation}>
