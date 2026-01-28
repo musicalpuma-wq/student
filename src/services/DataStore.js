@@ -106,6 +106,26 @@ export const DataStore = {
     if (changed) DataStore.save(data);
   },
 
+  // Delete Course
+  deleteCourse: (courseName) => {
+    const data = DataStore.load();
+    
+    // 1. Remove students
+    data.students = data.students.filter(s => s.course !== courseName);
+
+    // 2. Remove activities
+    if (data.activities[courseName]) {
+      delete data.activities[courseName];
+    }
+
+    // 3. Remove materials
+    if (data.materials && data.materials[courseName]) {
+      delete data.materials[courseName];
+    }
+
+    DataStore.save(data);
+  },
+
   // Activities
   getActivities: (course) => {
     const data = DataStore.load();

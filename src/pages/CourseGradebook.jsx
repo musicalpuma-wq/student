@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { DataStore } from '../services/DataStore';
-import { Plus, Calendar, FileText, UserSquare2, ChevronLeft, Save, ArrowUpDown, Mail, GripVertical, Edit2, ArrowRight, Trash2 } from 'lucide-react';
+import { Plus, Calendar, FileText, UserSquare2, ChevronLeft, Save, ArrowUpDown, Mail, GripVertical, Edit2, ArrowRight, Trash2, AlertTriangle, KeyRound } from 'lucide-react';
 
 export function CourseGradebook() {
   const { courseId } = useParams();
@@ -21,6 +21,21 @@ export function CourseGradebook() {
   const [isEditingCourseName, setIsEditingCourseName] = useState(false);
   const [newCourseName, setNewCourseName] = useState('');
   const [editingActivity, setEditingActivity] = useState(null);
+
+  
+  // Delete Course State
+  const [showDeleteCourseModal, setShowDeleteCourseModal] = useState(false);
+  const [deleteCourseInput, setDeleteCourseInput] = useState('');
+  const [deleteTimer, setDeleteTimer] = useState(30);
+
+  const [deleteCourseCanType, setDeleteCourseCanType] = useState(false);
+
+  // Security Code State
+  const [showSecurityModal, setShowSecurityModal] = useState(false);
+  const [securityCodeInput, setSecurityCodeInput] = useState('');
+  const [onSecuritySuccess, setOnSecuritySuccess] = useState(null); // Function to call on success
+  const [securityActionName, setSecurityActionName] = useState('');
+
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -28,7 +43,54 @@ export function CourseGradebook() {
     setStudents(DataStore.getStudentsByCourse(courseId));
     setActivities(DataStore.getActivities(courseId));
     setMaterials(DataStore.getMaterials(courseId));
+
   }, [courseId, refreshTrigger]);
+
+  // Delete Course Timer Logic
+  useEffect(() => {
+    let interval;
+    if (showDeleteCourseModal && deleteTimer > 0) {
+      interval = setInterval(() => {
+        setDeleteTimer(prev => prev - 1);
+      }, 1000);
+    } else if (deleteTimer === 0) {
+        setDeleteCourseCanType(true);
+    }
+    return () => clearInterval(interval);
+  }, [showDeleteCourseModal, deleteTimer]);
+
+  const handleStrictDeleteCourse = (e) => {
+      e.preventDefault();
+      if (deleteCourseInput === "I'm sure I want to delete this course") {
+          DataStore.deleteCourse(courseId);
+          navigate('/');
+      }
+  };
+
+  const openDeleteModal = () => {
+      setDeleteCourseInput('');
+      setDeleteTimer(30);
+      setDeleteCourseCanType(false);
+      setShowDeleteCourseModal(true);
+  };
+
+  const requestSecurityCheck = (actionName, onSuccess) => {
+      setSecurityActionName(actionName);
+      setOnSecuritySuccess(() => onSuccess); // Wrap in function to ensure state holds the function reference
+      setSecurityCodeInput('');
+      setShowSecurityModal(true);
+  };
+
+  const handleSecuritySubmit = (e) => {
+      e.preventDefault();
+      if (securityCodeInput === '6251') {
+          if (onSecuritySuccess) onSecuritySuccess();
+          setShowSecurityModal(false);
+          setSecurityCodeInput('');
+      } else {
+          alert("Incorrect security code.");
+      }
+  };
 
   /* Helper to parse "date note" format */
   const parseObservation = (obsString) => {
@@ -149,7 +211,7 @@ export function CourseGradebook() {
   };
 
   const handleDeleteObservation = (student, index) => {
-      if (window.confirm("Are you sure you want to delete this observation?")) {
+      const deleteObs = () => {
           const updatedAnnotations = student.annotations.filter((_, i) => i !== index);
           const updatedStudent = { 
               ...student, 
@@ -157,7 +219,9 @@ export function CourseGradebook() {
           };
           DataStore.updateStudent(updatedStudent);
           setStudents(prev => prev.map(s => s.id === student.id ? updatedStudent : s));
-      }
+      };
+      
+      requestSecurityCheck("delete this observation", deleteObs);
   };
 
 
@@ -307,6 +371,13 @@ export function CourseGradebook() {
                         title="Rename Course"
                     >
                         <Edit2 size={18} />
+                    </button>
+                    <button 
+                        onClick={() => requestSecurityCheck("delete this course", openDeleteModal)}
+                        style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-danger)', padding: '4px', marginLeft: '0.5rem' }}
+                        title="Delete Course"
+                    >
+                        <Trash2 size={18} />
                     </button>
                 </div>
             )}
@@ -1123,6 +1194,133 @@ export function CourseGradebook() {
                         </div>
                     </div>
                 )}
+            </div>
+        </div>
+      )}
+
+       {/* Strict Delete Course Modal */}
+       {showDeleteCourseModal && (
+        <div style={{
+            position: 'fixed',
+            top: 0, left: 0, right: 0, bottom: 0,
+            background: 'rgba(0,0,0,0.7)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1100, // Higher than other modals
+            backdropFilter: 'blur(5px)'
+        }}>
+            <div className="card" style={{ width: '450px', padding: '2rem', border: '1px solid var(--color-danger)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', color: 'var(--color-danger)', marginBottom: '1rem' }}>
+                    <AlertTriangle size={32} />
+                    <h2 style={{ margin: 0, fontSize: '1.5rem' }}>Danger Zone</h2>
+                </div>
+                
+                <p style={{ marginBottom: '1rem', fontWeight: 600 }}>Are you absolutely sure you want to delete the course "{courseId}"?</p>
+                <p style={{ marginBottom: '1.5rem', color: 'var(--color-text-secondary)', fontSize: '0.9rem' }}>
+                    This action is <span style={{ fontWeight: 700, color: 'var(--color-danger)' }}>IRREVERSIBLE</span>. 
+                    All students, grades, attendance records, and observations associated with this course will be permanently deleted.
+                </p>
+
+                <div style={{ 
+                    background: '#f5f5f7', 
+                    padding: '1rem', 
+                    borderRadius: '8px', 
+                    marginBottom: '1.5rem',
+                    textAlign: 'center',
+                    fontWeight: 600
+                }}>
+                    {deleteTimer > 0 ? (
+                        <span style={{ color: 'var(--color-text-secondary)' }}>Please wait {deleteTimer} seconds...</span>
+                    ) : (
+                         <span style={{ color: 'var(--color-success)' }}>Verification enabled.</span>
+                    )}
+                </div>
+
+                <form onSubmit={handleStrictDeleteCourse}>
+                     <div style={{ marginBottom: '1.5rem' }}>
+                         <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.9rem', fontWeight: 500 }}>
+                             Type "I'm sure I want to delete this course"
+                         </label>
+                         <input 
+                            className="input-field" 
+                            style={{ width: '100%', borderColor: deleteCourseInput === "I'm sure I want to delete this course" ? 'var(--color-danger)' : '' }}
+                            value={deleteCourseInput}
+                            onChange={e => setDeleteCourseInput(e.target.value)}
+                            disabled={!deleteCourseCanType}
+                            placeholder={!deleteCourseCanType ? "Waiting for timer..." : "Type the confirmation phrase"}
+                            onPaste={(e) => e.preventDefault()} // Prevent pasting for strictness
+                            autoComplete="off"
+                        />
+                     </div>
+                     <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end' }}>
+                         <button 
+                            type="button" 
+                            className="btn btn-secondary" 
+                            onClick={() => setShowDeleteCourseModal(false)}
+                         >
+                            Cancel
+                        </button>
+                         <button 
+                            type="submit" 
+                            className="btn"
+                            style={{ 
+                                background: 'var(--color-danger)', 
+                                opacity: (deleteCourseInput === "I'm sure I want to delete this course") ? 1 : 0.5,
+                                cursor: (deleteCourseInput === "I'm sure I want to delete this course") ? 'pointer' : 'not-allowed'
+                            }}
+                            disabled={deleteCourseInput !== "I'm sure I want to delete this course"}
+                         >
+                            Delete Course
+                         </button>
+                     </div>
+                </form>
+            </div>
+        </div>
+      )}
+
+
+      {/* Security Check Modal */}
+      {showSecurityModal && (
+        <div style={{
+            position: 'fixed',
+            top: 0, left: 0, right: 0, bottom: 0,
+            background: 'rgba(0,0,0,0.6)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1200, // Topmost
+            backdropFilter: 'blur(3px)'
+        }}>
+            <div className="card" style={{ width: '350px', padding: '2rem' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '1.5rem' }}>
+                    <div style={{ background: '#f5f5f7', padding: '1rem', borderRadius: '50%', marginBottom: '1rem' }}>
+                        <KeyRound size={32} color="var(--color-text-secondary)" />
+                    </div>
+                    <h3 style={{ margin: 0 }}>Security Check</h3>
+                    <p style={{ margin: '0.5rem 0 0', color: 'var(--color-text-secondary)', fontSize: '0.9rem', textAlign: 'center' }}>
+                        Enter code to {securityActionName}
+                    </p>
+                </div>
+                
+                <form onSubmit={handleSecuritySubmit}>
+                    <div style={{ marginBottom: '1.5rem' }}>
+                        <input 
+                            type="password"
+                            className="input-field" 
+                            style={{ width: '100%', textAlign: 'center', letterSpacing: '4px', fontSize: '1.5rem' }}
+                            placeholder="CODE"
+                            value={securityCodeInput}
+                            onChange={e => setSecurityCodeInput(e.target.value)}
+                            autoFocus
+                            maxLength={4}
+                        />
+                    </div>
+                    <div style={{ display: 'flex', gap: '1rem' }}>
+                        <button type="button" className="btn btn-secondary" style={{ flex: 1 }} onClick={() => setShowSecurityModal(false)}>Cancel</button>
+                        <button type="submit" className="btn" style={{ flex: 1 }}>Verify</button>
+                    </div>
+                </form>
             </div>
         </div>
       )}
