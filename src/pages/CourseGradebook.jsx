@@ -762,6 +762,8 @@ export function CourseGradebook() {
                                                             onClick={() => handleSendToParent(student, note)}
                                                         >
                                                             <Mail size={14} />
+                                                            Send to parent
+                                                            <ArrowRight size={14} />
                                                         </button>
                                                     </div>
                                                 </div>
