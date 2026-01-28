@@ -288,6 +288,12 @@ export function CourseGradebook() {
     setStudents(prev => prev.map(s => s.id === student.id ? updatedStudent : s));
   };
 
+  const handleVPSChange = (student, newVPS) => {
+      const updatedStudent = { ...student, vpsCode: newVPS };
+      DataStore.updateStudent(updatedStudent);
+      setStudents(prev => prev.map(s => s.id === student.id ? updatedStudent : s));
+  };
+
   // --- Observer Logic ---
   const handleSendToParent = (student, note) => {
       if (!student.parentEmail) {
@@ -505,7 +511,22 @@ export function CourseGradebook() {
                     {getSortedStudents().map((student, index) => (
                         <tr key={student.id}>
                             <td style={{ textAlign: 'center', color: '#86868b', fontSize: '0.9rem' }}>{index + 1}</td>
-                            <td style={{ fontSize: '0.9rem', color: 'var(--color-text-secondary)' }}>{student.vpsCode}</td>
+                            <td style={{ fontSize: '0.9rem', color: 'var(--color-text-secondary)', padding: 0 }}>
+                                <input 
+                                    className="input-field-transparent"
+                                    value={student.vpsCode || ''}
+                                    onChange={(e) => handleVPSChange(student, e.target.value)}
+                                    style={{ 
+                                        width: '100%', 
+                                        border: '1px solid transparent', 
+                                        background: 'transparent',
+                                        fontSize: '0.9rem',
+                                        color: 'var(--color-text-secondary)',
+                                        textAlign: 'center'
+                                    }}
+                                    placeholder="-"
+                                />
+                            </td>
                             <td style={{ fontWeight: 500 }}>{student.name}</td>
                             {activities.map(act => {
                                 const grade = (student.grades || {})[act.id];
@@ -644,7 +665,22 @@ export function CourseGradebook() {
                              return (
                                 <tr key={student.id}>
                                     <td style={{ textAlign: 'center', color: '#86868b', fontSize: '0.9rem' }}>{calculateStudentIndex(student.id) || students.indexOf(student) + 1}</td>
-                                    <td style={{ fontSize: '0.9rem', color: 'var(--color-text-secondary)' }}>{student.vpsCode}</td>
+                                    <td style={{ fontSize: '0.9rem', color: 'var(--color-text-secondary)', padding: 0 }}>
+                                        <input 
+                                            className="input-field-transparent"
+                                            value={student.vpsCode || ''}
+                                            onChange={(e) => handleVPSChange(student, e.target.value)}
+                                            style={{ 
+                                                width: '100%', 
+                                                border: '1px solid transparent', 
+                                                background: 'transparent',
+                                                fontSize: '0.9rem',
+                                                color: 'var(--color-text-secondary)',
+                                                textAlign: 'center'
+                                            }}
+                                            placeholder="-"
+                                        />
+                                    </td>
                                     <td style={{ fontWeight: 500 }}>{student.name}</td>
                                     {dates.map(date => {
                                         const status = student.attendance?.[date] || 'present'; // Default assumption if column exists? Or null?
@@ -727,7 +763,22 @@ export function CourseGradebook() {
                     {getSortedStudents().map((student, index) => (
                         <tr key={student.id}>
                             <td style={{ textAlign: 'center', color: '#86868b' }}>{index + 1}</td>
-                            <td>{student.vpsCode}</td>
+                            <td style={{ fontSize: '0.9rem', color: 'var(--color-text-secondary)', padding: 0 }}>
+                                  <input 
+                                    className="input-field-transparent"
+                                    value={student.vpsCode || ''}
+                                    onChange={(e) => handleVPSChange(student, e.target.value)}
+                                    style={{ 
+                                        width: '100%', 
+                                        border: '1px solid transparent', 
+                                        background: 'transparent',
+                                        fontSize: '0.9rem',
+                                        color: 'var(--color-text-secondary)',
+                                        textAlign: 'center'
+                                    }}
+                                    placeholder="-"
+                                />
+                            </td>
                             <td style={{ fontWeight: 500 }}>{student.name}</td>
                             {materials.map(mat => (
                                 <td key={mat.id} style={{ padding: '0.5rem' }}>

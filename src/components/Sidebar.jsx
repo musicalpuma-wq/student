@@ -61,7 +61,7 @@ export function Sidebar() {
       zIndex: 100
     }}>
       <div style={{ marginBottom: '3rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-        <div style={{ width: '32px', height: '32px', background: 'var(--color-accent)', borderRadius: '8px' }}></div>
+        <img src="/logo-note.png" alt="AcademicFlow Logo" style={{ width: '40px', height: 'auto', marginRight: '0.5rem' }} />
         <h2 style={{ fontSize: '1.2rem', margin: 0 }}>Academic<span style={{color: 'var(--color-accent)'}}>Flow</span></h2>
       </div>
 
