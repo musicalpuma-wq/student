@@ -40,9 +40,35 @@ export function CourseGradebook() {
 
   useEffect(() => {
     // Load data
-    setStudents(DataStore.getStudentsByCourse(courseId));
+    const loadedStudents = DataStore.getStudentsByCourse(courseId);
+    setStudents(loadedStudents);
     setActivities(DataStore.getActivities(courseId));
     setMaterials(DataStore.getMaterials(courseId));
+
+    // Automated Observation Check
+    let hasChanges = false;
+    const pendingNote = "Pendiente de correo electrónico de acudiente";
+    const today = new Date().toISOString().split('T')[0];
+
+    const updatedStudents = loadedStudents.map(s => {
+        if (s.parentEmail === 'pending@pending.co') {
+             // Check if note exists (loose check for content match)
+             const hasNote = s.annotations && s.annotations.some(note => note.includes(pendingNote));
+             if (!hasNote) {
+                 hasChanges = true;
+                 const newAnnotation = `[${today}] ${pendingNote}`;
+                 const updatedAnnotations = [...(s.annotations || []), newAnnotation];
+                 const updatedS = { ...s, annotations: updatedAnnotations };
+                 DataStore.updateStudent(updatedS); // Update persistent store immediately
+                 return updatedS;
+             }
+        }
+        return s;
+    });
+
+    if (hasChanges) {
+        setStudents(updatedStudents); // Update local state if we added notes
+    }
 
   }, [courseId, refreshTrigger]);
 
@@ -390,6 +416,89 @@ export function CourseGradebook() {
             <p style={{ color: 'var(--color-text-secondary)' }}>Course Management</p>
         </div>
       </div>
+      
+      {/* Course Statistics Header */}
+      <div style={{ 
+          display: 'grid', 
+          gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', 
+          gap: '1rem', 
+          marginBottom: '2rem',
+          padding: '1rem',
+          background: '#f5f5f7',
+          borderRadius: 'var(--radius-md)'
+      }}>
+          {(() => {
+              const studentsList = students || [];
+              const totalStudents = studentsList.length;
+              
+              // Total Observations
+              const totalObs = studentsList.reduce((acc, s) => acc + (s.annotations ? s.annotations.length : 0), 0);
+              
+              // Graded Activities
+              const totalActivities = activities.length;
+              
+              // Compliance %
+              // Definition: (Percentage of students who presented the activity / Total students) * Total activities... wait.
+              // Logic requested: "percentage of students who have a grade (cell not empty) against total students"
+              // "Example if there are 2 grades, and of 25 students, 1st grade has 20, 2nd has 15. Total notes = 35. Total possible = 50. Compliance = 70%."
+              let totalPossibleGrades = totalStudents * totalActivities;
+              let actualGradesCount = 0;
+              let sumGrades = 0;
+              
+              studentsList.forEach(s => {
+                  activities.forEach(a => {
+                      const g = (s.grades || {})[a.id];
+                      // Check if empty
+                      if (g !== undefined && g !== null && g !== '') {
+                          actualGradesCount++;
+                          const val = parseFloat(g);
+                          if (!isNaN(val)) sumGrades += val;
+                      } else {
+                          // Empty cells count as 1.0 for Average calculation per user request
+                          // "las casillas vacías tómalas como un '1,0' ya que es la nota más baja posible"
+                          sumGrades += 1.0; 
+                      }
+                  });
+              });
+              
+              const compliance = totalPossibleGrades > 0 
+                  ? Math.round((actualGradesCount / totalPossibleGrades) * 100) 
+                  : 0;
+
+              // General Course Average
+              // Average = Sum of all grades (treating empty as 1.0) / Total possible grades
+              const average = totalPossibleGrades > 0 
+                  ? (sumGrades / totalPossibleGrades).toFixed(2)
+                  : '-';
+                  
+              return (
+                  <>
+                    <div style={{ textAlign: 'center' }}>
+                        <div style={{ fontSize: '0.8rem', color: '#86868b', fontWeight: 600, textTransform: 'uppercase' }}>Students</div>
+                        <div style={{ fontSize: '1.5rem', fontWeight: 700 }}>{totalStudents}</div>
+                    </div>
+                    <div style={{ textAlign: 'center' }}>
+                        <div style={{ fontSize: '0.8rem', color: '#86868b', fontWeight: 600, textTransform: 'uppercase' }}>Observations</div>
+                        <div style={{ fontSize: '1.5rem', fontWeight: 700 }}>{totalObs}</div>
+                    </div>
+                     <div style={{ textAlign: 'center' }}>
+                        <div style={{ fontSize: '0.8rem', color: '#86868b', fontWeight: 600, textTransform: 'uppercase' }}>Activities</div>
+                        <div style={{ fontSize: '1.5rem', fontWeight: 700 }}>{totalActivities}</div>
+                    </div>
+                    <div style={{ textAlign: 'center' }}>
+                        <div style={{ fontSize: '0.8rem', color: '#86868b', fontWeight: 600, textTransform: 'uppercase' }}>Compliance</div>
+                        <div style={{ fontSize: '1.5rem', fontWeight: 700, color: compliance < 70 ? 'var(--color-danger)' : 'var(--color-success)' }}>
+                            {compliance}%
+                        </div>
+                    </div>
+                     <div style={{ textAlign: 'center' }}>
+                        <div style={{ fontSize: '0.8rem', color: '#86868b', fontWeight: 600, textTransform: 'uppercase' }}>Course Avg</div>
+                        <div style={{ fontSize: '1.5rem', fontWeight: 700 }}>{average}</div>
+                    </div>
+                  </>
+              );
+          })()}
+      </div>
 
       {/* Tabs */}
       <div style={{ display: 'flex', gap: '1rem', marginBottom: '1.5rem', borderBottom: '1px solid var(--color-border)', paddingBottom: '0.5rem' }}>
@@ -654,7 +763,8 @@ export function CourseGradebook() {
                         </tr>
                     </thead>
                     <tbody>
-                         {getSortedStudents().map(student => {
+
+                         {getSortedStudents().map((student, index) => {
                              const dates = Array.from(new Set(students.flatMap(s => Object.keys(s.attendance || {})))).sort();
                              // Calculate totals
                              const counts = { present: 0, absent: 0, late: 0 };
@@ -664,7 +774,7 @@ export function CourseGradebook() {
 
                              return (
                                 <tr key={student.id}>
-                                    <td style={{ textAlign: 'center', color: '#86868b', fontSize: '0.9rem' }}>{calculateStudentIndex(student.id) || students.indexOf(student) + 1}</td>
+                                    <td style={{ textAlign: 'center', color: '#86868b', fontSize: '0.9rem' }}>{index + 1}</td>
                                     <td style={{ fontSize: '0.9rem', color: 'var(--color-text-secondary)', padding: 0 }}>
                                         <input 
                                             className="input-field-transparent"
