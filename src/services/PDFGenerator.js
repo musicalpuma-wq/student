@@ -21,7 +21,8 @@ export const PDFGenerator = {
       doc.setFontSize(10);
       doc.text(`Generated: ${new Date().toLocaleDateString()}`, 14, 28);
 
-      const students = DataStore.getStudentsByCourse(courseId);
+      const students = DataStore.getStudentsByCourse(courseId)
+        .sort((a, b) => a.name.localeCompare(b.name));
       
       // Define Columns
       const tableHead = [];
@@ -78,7 +79,8 @@ export const PDFGenerator = {
       doc.setFontSize(10);
       doc.text(`Generated: ${new Date().toLocaleDateString()}`, 14, 28);
 
-      const students = DataStore.getStudentsByCourse(courseId);
+      const students = DataStore.getStudentsByCourse(courseId)
+        .sort((a, b) => a.name.localeCompare(b.name));
       const activities = DataStore.getActivities(courseId);
 
       // Columns
