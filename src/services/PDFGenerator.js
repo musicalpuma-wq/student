@@ -1,5 +1,6 @@
 import jsPDF from 'jspdf';
-import 'jspdf-autotable';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 import { DataStore } from './DataStore';
 
 export const PDFGenerator = {
@@ -50,7 +51,7 @@ export const PDFGenerator = {
           return row;
       });
 
-      doc.autoTable({
+      autoTable(doc, {
         startY: 35,
         head: tableHead,
         body: tableBody,
@@ -119,7 +120,7 @@ export const PDFGenerator = {
           return row;
       });
 
-      doc.autoTable({
+      autoTable(doc, {
         startY: 35,
         head: [headers],
         body: body,
