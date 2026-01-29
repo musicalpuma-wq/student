@@ -4,6 +4,7 @@ import { Layout } from './components/Layout';
 import { Dashboard } from './pages/Dashboard';
 import { StudentRegistration } from './pages/StudentRegistration';
 import { CourseGradebook } from './pages/CourseGradebook';
+import { Downloads } from './pages/Downloads';
 import { Login } from './pages/Login';
 
 function App() {
@@ -32,6 +33,7 @@ function App() {
           <Route index element={<Dashboard />} />
           <Route path="register" element={<StudentRegistration />} />
           <Route path="course/:courseId" element={<CourseGradebook />} />
+          <Route path="downloads" element={<Downloads />} />
         </Route>
       </Routes>
     </BrowserRouter>

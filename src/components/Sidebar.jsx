@@ -1,5 +1,5 @@
 import { NavLink } from 'react-router-dom';
-import { LayoutDashboard, Users, FileSpreadsheet, Settings } from 'lucide-react';
+import { LayoutDashboard, Users, FileSpreadsheet, Settings, Download } from 'lucide-react';
 
 export function Sidebar() {
   const navItems = [
@@ -142,6 +142,26 @@ export function Sidebar() {
       </nav>
 
       <div style={{ marginTop: 'auto' }}>
+        <NavLink
+            to="/downloads"
+            style={({ isActive }) => ({
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.75rem',
+              padding: '0.8rem 1rem',
+              borderRadius: 'var(--radius-md)',
+              color: isActive ? 'var(--color-accent)' : 'var(--color-text-secondary)',
+              background: isActive ? 'rgba(0, 113, 227, 0.08)' : 'transparent',
+              textDecoration: 'none',
+              fontWeight: isActive ? 600 : 500,
+              transition: 'all 0.2s ease',
+              marginBottom: '1rem'
+            })}
+        >
+            <Download size={20} />
+            Downloads
+        </NavLink>
+        
         <div style={{ padding: '1rem', background: '#f5f5f7', borderRadius: 'var(--radius-md)' }}>
           <p style={{ fontSize: '0.8rem', color: '#86868b', fontWeight: 600 }}>Teacher</p>
           <p style={{ fontSize: '0.9rem', fontWeight: 500 }}>Mauricio Herrera</p>
