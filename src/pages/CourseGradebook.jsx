@@ -47,21 +47,35 @@ export function CourseGradebook() {
 
     // Automated Observation Check
     let hasChanges = false;
-    const pendingNote = "Pendiente de correo electrónico de acudiente";
+    const pendingEmailNote = "Pendiente de correo electrónico de acudiente";
+    const pendingPhoneNote = "No ha proporcionado número telefónico del acudiente";
     const today = new Date().toISOString().split('T')[0];
 
     const updatedStudents = loadedStudents.map(s => {
+        let annotations = [...(s.annotations || [])];
+        let wasUpdated = false;
+
+        // Check Email
         if (s.parentEmail === 'pending@pending.co') {
-             // Check if note exists (loose check for content match)
-             const hasNote = s.annotations && s.annotations.some(note => note.includes(pendingNote));
-             if (!hasNote) {
-                 hasChanges = true;
-                 const newAnnotation = `[${today}] ${pendingNote}`;
-                 const updatedAnnotations = [...(s.annotations || []), newAnnotation];
-                 const updatedS = { ...s, annotations: updatedAnnotations };
-                 DataStore.updateStudent(updatedS); // Update persistent store immediately
-                 return updatedS;
+             if (!annotations.some(note => note.includes(pendingEmailNote))) {
+                 annotations.push(`[${today}] ${pendingEmailNote}`);
+                 wasUpdated = true;
              }
+        }
+
+        // Check Phone
+        if (!s.parentPhone || s.parentPhone === 'Pending' || s.parentPhone.trim() === '') {
+             if (!annotations.some(note => note.includes(pendingPhoneNote))) {
+                 annotations.push(`[${today}] ${pendingPhoneNote}`);
+                 wasUpdated = true;
+             }
+        }
+
+        if (wasUpdated) {
+             hasChanges = true;
+             const updatedS = { ...s, annotations };
+             DataStore.updateStudent(updatedS); // Update persistent store immediately
+             return updatedS;
         }
         return s;
     });
