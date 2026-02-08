@@ -43,7 +43,8 @@ export const DataStore = {
       if (!s.grades) s.grades = {};
       if (!s.attendance) s.attendance = {};
       if (!s.materials) s.materials = {};
-      if (!s.observations) s.observations = [];
+      if (!s.observations) s.observations = []; // Standard array for general purpose obs if needed
+      if (!s.annotations) s.annotations = []; // Specific "Observer" tab annotations
       return s;
   },
 
@@ -63,6 +64,18 @@ export const DataStore = {
       data.students[index] = DataStore.sanitizeStudent(updatedStudent);
       DataStore.save(data);
     }
+  },
+
+  deleteStudent: (studentId) => {
+    const data = DataStore.load();
+    const initialLength = data.students.length;
+    data.students = data.students.filter(s => s.id !== studentId);
+    
+    if (data.students.length !== initialLength) {
+        DataStore.save(data);
+        return true;
+    }
+    return false;
   },
 
   // Courses (derived from students)

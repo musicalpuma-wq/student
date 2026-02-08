@@ -44,6 +44,22 @@ export function Dashboard() {
       return { avg: courseAvg.toFixed(1), failing: failingCount };
   };
 
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState([]);
+
+  useEffect(() => {
+    if (searchQuery.trim().length > 1) {
+        const allStudents = DataStore.getStudents();
+        const results = allStudents.filter(s => 
+            s.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+            (s.vpsCode && s.vpsCode.toLowerCase().includes(searchQuery.toLowerCase()))
+        );
+        setSearchResults(results.slice(0, 5)); // Limit to 5
+    } else {
+        setSearchResults([]);
+    }
+  }, [searchQuery]);
+
   return (
     <div>
       <header style={{ marginBottom: '2.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
@@ -53,25 +69,48 @@ export function Dashboard() {
             Welcome back. Here is an overview of your classes.
             </p>
         </div>
-        <div style={{ minWidth: '200px' }}>
+        <div style={{ minWidth: '250px', position: 'relative' }}>
             <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: 'var(--color-text-secondary)', marginBottom: '0.5rem' }}>
-                Quick Access
+                Quick Search
             </label>
-            <select 
-                style={{ width: '100%', padding: '0.6rem', borderRadius: '8px', border: '1px solid var(--color-border)' }}
-                onChange={(e) => {
-                    if (e.target.value) {
-                        navigate(`/course/${e.target.value}`);
-                    }
+            <input 
+                type="text"
+                placeholder="Search Student..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                style={{ 
+                    width: '100%', 
+                    padding: '0.6rem', 
+                    borderRadius: '8px', 
+                    border: '1px solid var(--color-border)',
+                    fontSize: '0.9rem'
                 }}
-            >
-                <option value="">Jump to Course...</option>
-                {courses.map(c => <option key={c} value={c}>{c}</option>)}
-            </select>
-            {/* Note: In a real app I would use useNavigate() hook at top level. 
-               Let's Fix this: I'll use a small inline navigation helper or just assume the user updates the URL manually? 
-               Wait, I can just use a proper select with onChange executing a navigation.
-            */}
+            />
+            {searchResults.length > 0 && (
+                <div style={{
+                    position: 'absolute',
+                    top: '100%',
+                    left: 0,
+                    right: 0,
+                    background: 'white',
+                    border: '1px solid var(--color-border)',
+                    borderRadius: '8px',
+                    marginTop: '4px',
+                    boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)',
+                    zIndex: 10
+                }}>
+                    {searchResults.map(s => (
+                        <div 
+                            key={s.id}
+                            onClick={() => navigate(`/course/${s.course}`)}
+                            style={{ padding: '8px 12px', cursor: 'pointer', borderBottom: '1px solid #eee' }}
+                        >
+                            <div style={{ fontWeight: 500 }}>{s.name}</div>
+                            <div style={{ fontSize: '0.8rem', color: '#666' }}>{s.course} • {s.vpsCode || '-'}</div>
+                        </div>
+                    ))}
+                </div>
+            )}
         </div>
       </header>
       

@@ -21,6 +21,7 @@ export function CourseGradebook() {
   const [isEditingCourseName, setIsEditingCourseName] = useState(false);
   const [newCourseName, setNewCourseName] = useState('');
   const [editingActivity, setEditingActivity] = useState(null);
+  const [showLowGradesOnly, setShowLowGradesOnly] = useState(false);
 
   
   // Delete Course State
@@ -155,8 +156,28 @@ export function CourseGradebook() {
   };
 
   const getSortedStudents = () => {
-    const sorted = [...students];
-    sorted.sort((a, b) => {
+    let filtered = [...students];
+
+    if (showLowGradesOnly) {
+        filtered = filtered.filter(s => {
+            // Check if any grade is <= 1.0 or missing (undefined/empty)
+            // User: "Filtro de estudiantes con 1,0 o sin nota"
+            // If activities exist, check against them.
+            if (activities.length === 0) return true; // Show all if no activities? Or none? Assume show all if suspicious.
+            
+            return activities.some(act => {
+                const g = (s.grades || {})[act.id];
+                const val = parseFloat(g);
+                // Missing or Empty
+                if (g === undefined || g === null || g === '') return true;
+                // <= 1.0
+                if (!isNaN(val) && val <= 1.0) return true;
+                return false;
+            });
+        });
+    }
+
+    filtered.sort((a, b) => {
       let valA, valB;
 
       if (sortConfig.key === 'name') {
@@ -183,7 +204,7 @@ export function CourseGradebook() {
       if (valA > valB) return sortConfig.direction === 'asc' ? 1 : -1;
       return 0;
     });
-    return sorted;
+    return filtered;
   };
 
   // --- Grades Logic ---
@@ -262,6 +283,49 @@ export function CourseGradebook() {
       };
       
       requestSecurityCheck("delete this observation", deleteObs);
+  };
+
+  const handleDeleteStudent = (student) => {
+      requestSecurityCheck(`delete student ${student.name}`, () => {
+          const success = DataStore.deleteStudent(student.id);
+          if (success) {
+              setStudents(prev => prev.filter(s => s.id !== student.id));
+              refreshData(); // Force full refresh to be safe
+          }
+      });
+  };
+
+  const handleMoveStudent = (student) => {
+      // Simple prompt for now, or a custom modal if preferred. 
+      // User asked: "Opción de cambiar a un estudiante de curso"
+      // Let's get list of available courses to show in prompt? No, prompt is text.
+      // Better: Use a confirm or prompt. 
+      const availableCourses = DataStore.getCourses().filter(c => c !== courseId);
+      if (availableCourses.length === 0) {
+          alert("No other courses available to move to.");
+          return;
+      }
+      
+      const targetCourse = prompt(`Move ${student.name} to which course?\nAvailable: ${availableCourses.join(', ')}`);
+      
+      if (targetCourse && availableCourses.includes(targetCourse)) {
+          requestSecurityCheck(`move ${student.name} to ${targetCourse}`, () => {
+              const updatedStudent = { ...student, course: targetCourse };
+              DataStore.updateStudent(updatedStudent);
+              setStudents(prev => prev.filter(s => s.id !== student.id));
+              // Note: We don't remove grades, so they transfer.
+          });
+      } else if (targetCourse) {
+           // Maybe user typed a new course name?
+           // If we allow moving to a new course that doesn't exist yet:
+            if (confirm(`Course '${targetCourse}' does not exist. Create it and move student?`)) {
+                 requestSecurityCheck(`create course ${targetCourse} and move ${student.name}`, () => {
+                    const updatedStudent = { ...student, course: targetCourse };
+                    DataStore.updateStudent(updatedStudent);
+                    setStudents(prev => prev.filter(s => s.id !== student.id));
+                 });
+            }
+      }
   };
 
 
@@ -568,6 +632,29 @@ export function CourseGradebook() {
             }}>
             Materials Assignment
         </button>
+        
+        {/* Filter Toggle (Only visible in Grades tab) */}
+        {activeTab === 'grades' && (
+            <label style={{ 
+                marginLeft: 'auto', 
+                display: 'flex', 
+                alignItems: 'center', 
+                gap: '8px', 
+                cursor: 'pointer',
+                fontSize: '0.9rem',
+                color: showLowGradesOnly ? 'var(--color-danger)' : 'var(--color-text-secondary)',
+                fontWeight: 500
+            }}>
+                <input 
+                    type="checkbox" 
+                    checked={showLowGradesOnly} 
+                    onChange={(e) => setShowLowGradesOnly(e.target.checked)}
+                    style={{ accentColor: 'var(--color-danger)' }}
+                />
+                <AlertTriangle size={16} />
+                Show Alert Cases (≤1.0 or Missing)
+            </label>
+        )}
       </div>
 
       <div className="card" style={{ overflowX: 'auto', position: 'relative' }}>
@@ -628,6 +715,7 @@ export function CourseGradebook() {
                             </button>
                         </th>
                         <th style={{ width: '100px', textAlign: 'center', color: 'var(--color-text-primary)' }}>Avg</th>
+                        <th style={{ width: '80px', textAlign: 'center' }}>Actions</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -720,6 +808,24 @@ export function CourseGradebook() {
                             )})}
                             <td></td>
                             <td style={{ textAlign: 'center', fontWeight: 700 }}>{calculateAverage(student)}</td>
+                             <td style={{ textAlign: 'center' }}>
+                                <div style={{ display: 'flex', gap: '4px', justifyContent: 'center' }}>
+                                    <button 
+                                        onClick={() => handleMoveStudent(student)}
+                                        title="Move Student"
+                                        style={{ border: 'none', background: 'none', cursor: 'pointer', color: 'var(--color-text-secondary)' }}
+                                    >
+                                        <ArrowRight size={16} />
+                                    </button>
+                                    <button 
+                                        onClick={() => handleDeleteStudent(student)}
+                                        title="Delete Student"
+                                        style={{ border: 'none', background: 'none', cursor: 'pointer', color: 'var(--color-danger)' }}
+                                    >
+                                        <Trash2 size={16} />
+                                    </button>
+                                </div>
+                            </td>
                         </tr>
                     ))}
                     {students.length === 0 && (
@@ -1373,7 +1479,48 @@ export function CourseGradebook() {
         </div>
       )}
 
-       {/* Strict Delete Course Modal */}
+       {/* Security Modal */}
+      {showSecurityModal && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+          backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000
+        }}>
+          <div style={{ background: 'white', padding: '2rem', borderRadius: '12px', width: '90%', maxWidth: '400px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '1rem', color: 'var(--color-text-primary)' }}>
+               <KeyRound size={24} />
+               <h3 style={{ margin: 0 }}>Security Check</h3>
+            </div>
+            <p style={{ marginBottom: '1.5rem', color: 'var(--color-text-secondary)' }}>
+                Please enter the security code to <strong>{securityActionName}</strong>.
+            </p>
+            <form onSubmit={handleSecuritySubmit}>
+                <input 
+                    type="password" 
+                    autoFocus
+                    placeholder="Security Code"
+                    value={securityCodeInput}
+                    onChange={(e) => setSecurityCodeInput(e.target.value)}
+                    className="input-field"
+                    style={{ width: '100%', padding: '0.8rem', marginBottom: '1rem' }}
+                />
+                <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end' }}>
+                    <button 
+                        type="button" 
+                        className="btn btn-secondary"
+                        onClick={() => setShowSecurityModal(false)}
+                    >
+                        Cancel
+                    </button>
+                    <button type="submit" className="btn btn-primary">
+                        Confirm
+                    </button>
+                </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Strict Delete Course Modal */}
        {showDeleteCourseModal && (
         <div style={{
             position: 'fixed',

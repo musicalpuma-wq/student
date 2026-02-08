@@ -35,6 +35,7 @@ export const PDFGenerator = {
       if (selectedFields.parentName) headers.push('Parent Name');
       if (selectedFields.parentPhone) headers.push('Phone');
       if (selectedFields.parentEmail) headers.push('Email');
+      if (selectedFields.generalObservations) headers.push('General Observations');
       
       tableHead.push(headers);
 
@@ -48,6 +49,11 @@ export const PDFGenerator = {
           if (selectedFields.parentName) row.push(s.parentName);
           if (selectedFields.parentPhone) row.push(s.parentPhone);
           if (selectedFields.parentEmail) row.push(s.parentEmail);
+          if (selectedFields.generalObservations) {
+              // Join all annotations into a single string
+              const obs = (s.annotations || []).join('\n');
+              row.push(obs);
+          }
           return row;
       });
 

@@ -10,15 +10,12 @@ import { Login } from './pages/Login';
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
 
-  useEffect(() => {
-    const auth = localStorage.getItem('isAuthenticated');
-    if (auth === 'true') {
-      setIsAuthenticated(true);
-    }
-  }, []);
+  /* 
+   * Authentication is now session-only (in-memory). 
+   * Reloading the page will require logging in again.
+   */
 
   const handleLogin = () => {
-    localStorage.setItem('isAuthenticated', 'true');
     setIsAuthenticated(true);
   };
 
