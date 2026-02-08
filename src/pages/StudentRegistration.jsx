@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { DataStore } from '../services/DataStore';
 import { useNavigate } from 'react-router-dom';
 import { Save, X } from 'lucide-react';
@@ -24,6 +24,17 @@ export function StudentRegistration() {
   useState(() => {
       setCourses(DataStore.getCourses());
   }, []);
+
+  // Auto-sync Jornada with Course
+  useEffect(() => {
+      if (formData.course) {
+          if (formData.course.includes('JT')) {
+              setFormData(prev => ({ ...prev, jornada: 'Tarde' }));
+          } else {
+              setFormData(prev => ({ ...prev, jornada: 'Mañana' }));
+          }
+      }
+  }, [formData.course]);
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -106,7 +117,8 @@ export function StudentRegistration() {
                   className="input-field" 
                   name="jornada" 
                   value={formData.jornada} 
-                  onChange={handleChange}
+                  disabled // Locked
+                  style={{ backgroundColor: '#f5f5f7', color: '#888' }}
               >
                  <option value="Mañana">Mañana</option>
                  <option value="Tarde">Tarde</option>

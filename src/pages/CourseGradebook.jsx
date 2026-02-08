@@ -313,7 +313,8 @@ export function CourseGradebook() {
       
       if (targetCourse && availableCourses.includes(targetCourse)) {
           requestSecurityCheck(`move ${student.name} to ${targetCourse}`, () => {
-              const updatedStudent = { ...student, course: targetCourse };
+              const newJornada = targetCourse.includes('JT') ? 'Tarde' : 'Mañana';
+              const updatedStudent = { ...student, course: targetCourse, jornada: newJornada };
               DataStore.updateStudent(updatedStudent);
               setStudents(prev => prev.filter(s => s.id !== student.id));
               if (viewingStudent && viewingStudent.id === student.id) {
@@ -326,8 +327,10 @@ export function CourseGradebook() {
            // If we allow moving to a new course that doesn't exist yet:
             if (confirm(`Course '${targetCourse}' does not exist. Create it and move student?`)) {
                  requestSecurityCheck(`create course ${targetCourse} and move ${student.name}`, () => {
-                    const updatedStudent = { ...student, course: targetCourse };
+                    const newJornada = targetCourse.includes('JT') ? 'Tarde' : 'Mañana';
+                    const updatedStudent = { ...student, course: targetCourse, jornada: newJornada };
                     DataStore.updateStudent(updatedStudent);
+                    DataStore.addCourse(targetCourse); // Ensure course is added to list
                     setStudents(prev => prev.filter(s => s.id !== student.id));
                     if (viewingStudent && viewingStudent.id === student.id) {
                         setViewingStudent(null);
@@ -1361,6 +1364,8 @@ export function CourseGradebook() {
                                      className="input-field" 
                                      value={viewingStudent.jornada || 'Mañana'} 
                                      onChange={e => setViewingStudent({...viewingStudent, jornada: e.target.value})}
+                                     disabled // Locked
+                                     style={{ backgroundColor: '#f5f5f7', color: '#888' }}
                                  >
                                      <option value="Mañana">Mañana</option>
                                      <option value="Tarde">Tarde</option>
