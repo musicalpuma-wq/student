@@ -1340,13 +1340,25 @@ export function CourseGradebook() {
 
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                                 <div>
-                                     <label style={{ fontSize: '0.85rem', color: 'var(--color-text-secondary)', fontWeight: 600 }}>AGE</label>
+                                     <label style={{ fontSize: '0.85rem', color: 'var(--color-text-secondary)', fontWeight: 600 }}>DATE OF BIRTH</label>
                                      <input 
                                         className="input-field" 
-                                        type="number"
-                                        value={viewingStudent.age} 
-                                        onChange={e => setViewingStudent({...viewingStudent, age: e.target.value})}
+                                        type="date"
+                                        value={viewingStudent.birthDate || ''} 
+                                        onChange={e => {
+                                            const dob = e.target.value;
+                                            // Recalculate age immediately for UI
+                                            const birthDate = new Date(dob);
+                                            const diffMs = Date.now() - birthDate.getTime();
+                                            const ageDate = new Date(diffMs); 
+                                            const newAge = Math.abs(ageDate.getUTCFullYear() - 1970);
+                                            
+                                            setViewingStudent({...viewingStudent, birthDate: dob, age: newAge});
+                                        }}
                                     />
+                                    <div style={{ fontSize: '0.8rem', color: 'var(--color-text-secondary)', marginTop: '4px' }}>
+                                        Age: {viewingStudent.age}
+                                    </div>
                                 </div>
                                 <div>
                                      <label style={{ fontSize: '0.85rem', color: 'var(--color-text-secondary)', fontWeight: 600 }}>VPS CODE</label>

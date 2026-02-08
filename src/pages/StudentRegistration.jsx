@@ -8,6 +8,7 @@ export function StudentRegistration() {
   const [formData, setFormData] = useState({
     name: '',
     course: '',
+    birthDate: '',
     age: '',
     parentName: '',
     parentPhone: '',
@@ -36,8 +37,22 @@ export function StudentRegistration() {
       }
   }, [formData.course]);
 
+  const calculateAge = (dob) => {
+      if (!dob) return '';
+      const birthDate = new Date(dob);
+      const diffMs = Date.now() - birthDate.getTime();
+      const ageDate = new Date(diffMs); 
+      return Math.abs(ageDate.getUTCFullYear() - 1970);
+  };
+
   const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+    if (name === 'birthDate') {
+        const age = calculateAge(value);
+        setFormData({ ...formData, birthDate: value, age: age });
+    } else {
+        setFormData({ ...formData, [name]: value });
+    }
   };
 
   const handleSubmit = (e) => {
@@ -96,17 +111,28 @@ export function StudentRegistration() {
               </select>
             </div>
             
-            <div style={{ display: 'grid', gap: '0.5rem' }}>
-              <label style={{ fontSize: '0.9rem', fontWeight: 500 }}>Age</label>
-              <input 
-                className="input-field"
-                name="age" 
-                type="number"
-                placeholder="e.g. 12" 
-                value={formData.age}
-                onChange={handleChange}
-                required 
-              />
+            <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '0.5rem' }}>
+               <div style={{ display: 'grid', gap: '0.5rem' }}>
+                  <label style={{ fontSize: '0.9rem', fontWeight: 500 }}>Date of Birth</label>
+                  <input 
+                    className="input-field"
+                    name="birthDate" 
+                    type="date"
+                    value={formData.birthDate || ''}
+                    onChange={handleChange}
+                    required 
+                  />
+               </div>
+               <div style={{ display: 'grid', gap: '0.5rem' }}>
+                  <label style={{ fontSize: '0.9rem', fontWeight: 500 }}>Age</label>
+                  <input 
+                    className="input-field"
+                    value={formData.age || ''}
+                    readOnly
+                    style={{ backgroundColor: '#f5f5f7', color: '#666' }}
+                    title="Auto-calculated from DOB"
+                  />
+               </div>
             </div>
           </div>
 

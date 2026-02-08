@@ -42,7 +42,27 @@ export const DataStore = {
       const s = { ...student };
       if (!s.name) s.name = "Pending";
       if (!s.course) s.course = "Pending";
-      if (!s.age) s.age = 1;
+      if (!s.name) s.name = "Pending";
+      if (!s.course) s.course = "Pending";
+      
+      // Age / DOB Logic & Migration
+      if (!s.birthDate) {
+          if (s.age) {
+              // Migration: Set to Jan 1st of the birth year
+              const currentYear = new Date().getFullYear();
+              const birthYear = currentYear - parseInt(s.age);
+              s.birthDate = `${birthYear}-01-01`;
+          } else {
+              // Default if neither exists (e.g. new empty)
+              s.birthDate = `${new Date().getFullYear() - 10}-01-01`; // Default ~10yo
+          }
+      }
+      // Recalculate age from birthDate to ensure consistency
+      const dob = new Date(s.birthDate);
+      const diffMs = Date.now() - dob.getTime();
+      const ageDate = new Date(diffMs); 
+      s.age = Math.abs(ageDate.getUTCFullYear() - 1970);
+
       if (!s.parentName) s.parentName = "Pending";
       if (!s.parentPhone) s.parentPhone = "Pending";
       if (!s.parentPhone2) s.parentPhone2 = "Pending";
