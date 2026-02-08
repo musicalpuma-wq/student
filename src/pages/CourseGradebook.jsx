@@ -290,6 +290,9 @@ export function CourseGradebook() {
           const success = DataStore.deleteStudent(student.id);
           if (success) {
               setStudents(prev => prev.filter(s => s.id !== student.id));
+              if (viewingStudent && viewingStudent.id === student.id) {
+                  setViewingStudent(null);
+              }
               refreshData(); // Force full refresh to be safe
           }
       });
@@ -313,6 +316,9 @@ export function CourseGradebook() {
               const updatedStudent = { ...student, course: targetCourse };
               DataStore.updateStudent(updatedStudent);
               setStudents(prev => prev.filter(s => s.id !== student.id));
+              if (viewingStudent && viewingStudent.id === student.id) {
+                  setViewingStudent(null);
+              }
               // Note: We don't remove grades, so they transfer.
           });
       } else if (targetCourse) {
@@ -323,6 +329,9 @@ export function CourseGradebook() {
                     const updatedStudent = { ...student, course: targetCourse };
                     DataStore.updateStudent(updatedStudent);
                     setStudents(prev => prev.filter(s => s.id !== student.id));
+                    if (viewingStudent && viewingStudent.id === student.id) {
+                        setViewingStudent(null);
+                    }
                  });
             }
       }
@@ -715,7 +724,6 @@ export function CourseGradebook() {
                             </button>
                         </th>
                         <th style={{ width: '100px', textAlign: 'center', color: 'var(--color-text-primary)' }}>Avg</th>
-                        <th style={{ width: '80px', textAlign: 'center' }}>Actions</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -808,24 +816,6 @@ export function CourseGradebook() {
                             )})}
                             <td></td>
                             <td style={{ textAlign: 'center', fontWeight: 700 }}>{calculateAverage(student)}</td>
-                             <td style={{ textAlign: 'center' }}>
-                                <div style={{ display: 'flex', gap: '4px', justifyContent: 'center' }}>
-                                    <button 
-                                        onClick={() => handleMoveStudent(student)}
-                                        title="Move Student"
-                                        style={{ border: 'none', background: 'none', cursor: 'pointer', color: 'var(--color-text-secondary)' }}
-                                    >
-                                        <ArrowRight size={16} />
-                                    </button>
-                                    <button 
-                                        onClick={() => handleDeleteStudent(student)}
-                                        title="Delete Student"
-                                        style={{ border: 'none', background: 'none', cursor: 'pointer', color: 'var(--color-danger)' }}
-                                    >
-                                        <Trash2 size={16} />
-                                    </button>
-                                </div>
-                            </td>
                         </tr>
                     ))}
                     {students.length === 0 && (
@@ -1307,12 +1297,30 @@ export function CourseGradebook() {
             <div className="card" style={{ width: '500px', padding: '2rem', maxHeight: '90vh', overflowY: 'auto' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', borderBottom: '1px solid #eee', paddingBottom: '0.5rem' }}>
                     <h3 style={{ margin: 0 }}>Student Info</h3>
-                    <button 
-                        onClick={() => setIsEditingStudent(!isEditingStudent)}
-                        style={{ border: 'none', background: 'transparent', color: 'var(--color-accent)', cursor: 'pointer', fontWeight: 600 }}
-                    >
-                        {isEditingStudent ? 'Cancel Edit' : 'Edit'}
-                    </button>
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                        <button 
+                            onClick={() => handleMoveStudent(viewingStudent)}
+                            className="btn btn-secondary"
+                            title="Move Student"
+                            style={{ padding: '4px 8px', display: 'flex', alignItems: 'center', gap: '4px' }}
+                        >
+                            <ArrowRight size={16} /> Move
+                        </button>
+                        <button 
+                            onClick={() => handleDeleteStudent(viewingStudent)}
+                            className="btn btn-secondary"
+                            title="Delete Student"
+                            style={{ padding: '4px 8px', display: 'flex', alignItems: 'center', gap: '4px', color: 'var(--color-danger)', borderColor: 'var(--color-danger)' }}
+                        >
+                            <Trash2 size={16} /> Delete
+                        </button>
+                        <button 
+                            onClick={() => setIsEditingStudent(!isEditingStudent)}
+                            style={{ border: 'none', background: 'transparent', color: 'var(--color-accent)', cursor: 'pointer', fontWeight: 600, marginLeft: '8px' }}
+                        >
+                            {isEditingStudent ? 'Cancel Edit' : 'Edit'}
+                        </button>
+                    </div>
                 </div>
                 
                 {isEditingStudent ? (
