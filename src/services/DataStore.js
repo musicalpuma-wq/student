@@ -2,6 +2,7 @@ const STORAGE_KEY = 'sms_data_v1';
 
 const initialData = {
   students: [],
+  courses: [], // Explicit list of course names
   activities: {}, // { courseId: [ { id, name, maxGrade } ] }
   materials: {}, // { courseId: [ { id, name } ] }
 };
@@ -10,9 +11,18 @@ export const DataStore = {
   // Load full state
   load: () => {
     const data = localStorage.getItem(STORAGE_KEY);
-    const parsed = data ? JSON.parse(data) : initialData;
+    let parsed = data ? JSON.parse(data) : initialData;
+    
     // Migration for existing data without materials
     if (!parsed.materials) parsed.materials = {};
+    
+    // Migration for explicit courses
+    if (!parsed.courses) {
+        // Derive from students if missing
+        const derived = [...new Set(parsed.students.map(s => s.course))].sort();
+        parsed.courses = derived;
+    }
+    
     return parsed;
   },
 
@@ -37,14 +47,12 @@ export const DataStore = {
       if (!s.parentPhone) s.parentPhone = "Pending";
       if (!s.parentPhone2) s.parentPhone2 = "Pending";
       if (!s.parentEmail) s.parentEmail = "pending@pending.co";
-      if (!s.vpsCode) s.vpsCode = "Pending"; // Optional but asked to fill text
-      // genericObs? "Pending" might be annoying if truly optional, but user said "if a student lacks data".
-      // I'll stick to the "Profile" fields.
+      if (!s.vpsCode) s.vpsCode = "Pending"; 
       if (!s.grades) s.grades = {};
       if (!s.attendance) s.attendance = {};
       if (!s.materials) s.materials = {};
-      if (!s.observations) s.observations = []; // Standard array for general purpose obs if needed
-      if (!s.annotations) s.annotations = []; // Specific "Observer" tab annotations
+      if (!s.observations) s.observations = []; 
+      if (!s.annotations) s.annotations = []; 
       return s;
   },
 
@@ -53,6 +61,13 @@ export const DataStore = {
     const sanitized = DataStore.sanitizeStudent(student);
     const newStudent = { ...sanitized, id: crypto.randomUUID(), grades: {}, attendance: {} };
     data.students.push(newStudent);
+    
+    // Ensure course exists in list
+    if (newStudent.course && !data.courses.includes(newStudent.course)) {
+        data.courses.push(newStudent.course);
+        data.courses.sort();
+    }
+    
     DataStore.save(data);
     return newStudent;
   },
@@ -62,6 +77,13 @@ export const DataStore = {
     const index = data.students.findIndex(s => s.id === updatedStudent.id);
     if (index !== -1) {
       data.students[index] = DataStore.sanitizeStudent(updatedStudent);
+      
+      // Ensure course exists (in case of move)
+      if (updatedStudent.course && !data.courses.includes(updatedStudent.course)) {
+          data.courses.push(updatedStudent.course);
+          data.courses.sort();
+      }
+      
       DataStore.save(data);
     }
   },
@@ -71,6 +93,9 @@ export const DataStore = {
     const initialLength = data.students.length;
     data.students = data.students.filter(s => s.id !== studentId);
     
+    // We do NOT remove the course automatically if it becomes empty, 
+    // to allow empty courses to exist as per user request.
+    
     if (data.students.length !== initialLength) {
         DataStore.save(data);
         return true;
@@ -78,11 +103,21 @@ export const DataStore = {
     return false;
   },
 
-  // Courses (derived from students)
+  // Courses
   getCourses: () => {
-    const students = DataStore.getStudents();
-    const courses = [...new Set(students.map(s => s.course))].sort();
-    return courses;
+    const data = DataStore.load();
+    return data.courses || [];
+  },
+
+  addCourse: (courseName) => {
+      const data = DataStore.load();
+      if (!data.courses.includes(courseName)) {
+          data.courses.push(courseName);
+          data.courses.sort();
+          DataStore.save(data);
+          return true;
+      }
+      return false;
   },
 
   getStudentsByCourse: (course) => {
@@ -93,45 +128,56 @@ export const DataStore = {
     if (oldName === newName) return;
     const data = DataStore.load();
     
-    // 1. Update students
-    let changed = false;
+    // 1. Update course list
+    const courseIndex = data.courses.indexOf(oldName);
+    if (courseIndex !== -1) {
+        data.courses[courseIndex] = newName;
+        data.courses.sort();
+    } else {
+        // Should catch this, but just add if missing
+        data.courses.push(newName);
+        data.courses.sort();
+    }
+    
+    // 2. Update students
+    let changed = true; // Course list changed at least
     data.students.forEach(s => {
       if (s.course === oldName) {
         s.course = newName;
-        changed = true;
       }
     });
 
-    // 2. Update activities key
+    // 3. Update activities key
     if (data.activities[oldName]) {
       data.activities[newName] = data.activities[oldName];
       delete data.activities[oldName];
-      changed = true;
     }
 
-    // 3. Update materials key
+    // 4. Update materials key
     if (data.materials && data.materials[oldName]) {
       data.materials[newName] = data.materials[oldName];
       delete data.materials[oldName];
-      changed = true;
     }
 
-    if (changed) DataStore.save(data);
+    DataStore.save(data);
   },
 
   // Delete Course
   deleteCourse: (courseName) => {
     const data = DataStore.load();
     
-    // 1. Remove students
+    // 1. Remove from list
+    data.courses = data.courses.filter(c => c !== courseName);
+
+    // 2. Remove students
     data.students = data.students.filter(s => s.course !== courseName);
 
-    // 2. Remove activities
+    // 3. Remove activities
     if (data.activities[courseName]) {
       delete data.activities[courseName];
     }
 
-    // 3. Remove materials
+    // 4. Remove materials
     if (data.materials && data.materials[courseName]) {
       delete data.materials[courseName];
     }

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { DataStore } from '../services/DataStore';
 import { Link, useNavigate } from 'react-router-dom';
-import { Users, ChevronRight, GraduationCap } from 'lucide-react';
+import { Users, ChevronRight, GraduationCap, Plus } from 'lucide-react';
 
 export function Dashboard() {
   const navigate = useNavigate();
@@ -46,6 +46,11 @@ export function Dashboard() {
 
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState([]);
+  
+  // Create Course State
+  const [showCreateCourseModal, setShowCreateCourseModal] = useState(false);
+  const [newCourseGrade, setNewCourseGrade] = useState('');
+  const [newCourseJornada, setNewCourseJornada] = useState('JM'); // JM or JT
 
   useEffect(() => {
     if (searchQuery.trim().length > 1) {
@@ -59,6 +64,27 @@ export function Dashboard() {
         setSearchResults([]);
     }
   }, [searchQuery]);
+
+  const handleCreateCourse = (e) => {
+      e.preventDefault();
+      if (newCourseGrade && newCourseJornada) {
+          const courseName = `${newCourseGrade}-${newCourseJornada}`;
+          const success = DataStore.addCourse(courseName);
+          if (success) {
+              setCourses(DataStore.getCourses());
+              setStats({
+                  totalStudents: DataStore.getStudents().length,
+                  totalCourses: DataStore.getCourses().length
+              });
+              setShowCreateCourseModal(false);
+              setNewCourseGrade('');
+              setNewCourseJornada('JM');
+              alert(`Course ${courseName} created successfully!`);
+          } else {
+              alert(`Course ${courseName} already exists.`);
+          }
+      }
+  };
 
   return (
     <div>
@@ -144,7 +170,16 @@ export function Dashboard() {
         </div>
       </div>
 
-      <h3 style={{ marginBottom: '1.5rem', fontSize: '1.5rem' }}>Your Courses</h3>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+        <h3 style={{ fontSize: '1.5rem', margin: 0 }}>Your Courses</h3>
+        <button 
+            onClick={() => setShowCreateCourseModal(true)}
+            className="btn btn-secondary"
+            style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+        >
+            <Plus size={18} /> New Course
+        </button>
+      </div>
       
       <div style={{ 
         display: 'grid', 
@@ -260,6 +295,57 @@ export function Dashboard() {
           </div>
         )}
       </div>
+
+      {/* Create Course Modal */}
+      {showCreateCourseModal && (
+        <div style={{
+            position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+            background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000
+        }}>
+            <div className="card" style={{ width: '350px', padding: '2rem' }}>
+                <h3 style={{ marginBottom: '1.5rem' }}>Create New Course</h3>
+                <form onSubmit={handleCreateCourse}>
+                    <div style={{ marginBottom: '1rem' }}>
+                        <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.9rem', fontWeight: 500 }}>Grade / Curso</label>
+                        <input 
+                            className="input-field"
+                            placeholder="e.g. 901"
+                            value={newCourseGrade}
+                            onChange={(e) => setNewCourseGrade(e.target.value)}
+                            required
+                            autoFocus
+                        />
+                    </div>
+                    <div style={{ marginBottom: '1.5rem' }}>
+                        <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.9rem', fontWeight: 500 }}>Jornada</label>
+                        <select 
+                            className="input-field"
+                            value={newCourseJornada}
+                            onChange={(e) => setNewCourseJornada(e.target.value)}
+                        >
+                            <option value="JM">JM (Mañana)</option>
+                            <option value="JT">JT (Tarde)</option>
+                        </select>
+                        <p style={{ fontSize: '0.8rem', color: 'var(--color-text-secondary)', marginTop: '0.5rem' }}>
+                            Result: {newCourseGrade}-{newCourseJornada}
+                        </p>
+                    </div>
+                    <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end' }}>
+                        <button 
+                            type="button" 
+                            className="btn btn-secondary"
+                            onClick={() => setShowCreateCourseModal(false)}
+                        >
+                            Cancel
+                        </button>
+                        <button type="submit" className="btn">
+                            Create
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+      )}
     </div>
   );
 }

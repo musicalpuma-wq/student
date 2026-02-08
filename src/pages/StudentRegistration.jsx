@@ -18,6 +18,13 @@ export function StudentRegistration() {
     genericObs: ''
   });
 
+  const [courses, setCourses] = useState([]);
+  
+  // Load courses
+  useState(() => {
+      setCourses(DataStore.getCourses());
+  }, []);
+
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
@@ -64,14 +71,18 @@ export function StudentRegistration() {
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
             <div style={{ display: 'grid', gap: '0.5rem' }}>
               <label style={{ fontSize: '0.9rem', fontWeight: 500 }}>Course</label>
-              <input 
+              <select 
                 className="input-field"
                 name="course" 
-                placeholder="e.g. 6-A" 
                 value={formData.course}
                 onChange={handleChange}
                 required 
-              />
+              >
+                  <option value="">Select Course...</option>
+                  {courses.map(c => (
+                      <option key={c} value={c}>{c}</option>
+                  ))}
+              </select>
             </div>
             
             <div style={{ display: 'grid', gap: '0.5rem' }}>
