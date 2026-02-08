@@ -1501,9 +1501,11 @@ export function CourseGradebook() {
             <p style={{ marginBottom: '1.5rem', color: 'var(--color-text-secondary)' }}>
                 Please enter the security code to <strong>{securityActionName}</strong>.
             </p>
-            <form onSubmit={handleSecuritySubmit}>
+            <form onSubmit={handleSecuritySubmit} autoComplete="off">
                 <input 
                     type="password" 
+                    name="action_security_code_unique_v1"
+                    autoComplete="new-password"
                     autoFocus
                     placeholder="Security Code"
                     value={securityCodeInput}

@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { Save } from 'lucide-react';
 
 export function Login({ onLogin }) {
   const [password, setPassword] = useState('');
@@ -34,11 +33,13 @@ export function Login({ onLogin }) {
         maxWidth: '400px'
       }}>
         <h1 style={{ marginBottom: '1.5rem', textAlign: 'center' }}>Access Required</h1>
-        <form onSubmit={handleSubmit}>
+        <form onSubmit={handleSubmit} autoComplete="off">
           <div style={{ marginBottom: '1rem' }}>
             <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.9rem' }}>Password</label>
             <input
               type="password"
+              name="app_login_password_unique_v1"
+              autoComplete="new-password"
               className="input-field"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
