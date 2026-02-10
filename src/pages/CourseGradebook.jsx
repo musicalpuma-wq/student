@@ -451,6 +451,22 @@ export function CourseGradebook() {
       }
   };
 
+  const handleDeleteActivity = (activity) => {
+      requestSecurityCheck(`delete activity "${activity.name}"`, () => {
+           DataStore.deleteActivity(courseId, activity.id);
+           setEditingActivity(null);
+           refreshData();
+      });
+  };
+
+  const handleDeleteAttendance = (date) => {
+      requestSecurityCheck(`delete attendance for ${date}`, () => {
+           DataStore.deleteAttendanceColumn(courseId, date);
+           refreshData(); // Force refresh to update students list from store
+           // Note: DataStore.deleteAttendanceColumn updates local storage, refreshData triggers re-read via useEffect
+      });
+  };
+
   return (
     <div>
       <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '2rem' }}>
@@ -864,9 +880,25 @@ export function CourseGradebook() {
                             </th>
                             {/* Derive dates from all students' attendance records */}
                             {Array.from(new Set(students.flatMap(s => Object.keys(s.attendance || {})))).sort().map(date => (
-                                <th key={date} style={{ textAlign: 'center', minWidth: '50px' }}>
-                                    <div style={{ fontSize: '0.8rem', color: 'var(--color-text-primary)' }}>
+                                <th key={date} style={{ textAlign: 'center', minWidth: '80px' }}>
+                                    <div style={{ fontSize: '0.8rem', color: 'var(--color-text-primary)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
                                         {date.split('-').slice(1).join('/')}
+                                        <button 
+                                            onClick={() => handleDeleteAttendance(date)}
+                                            style={{ 
+                                                background: 'none', 
+                                                border: 'none', 
+                                                cursor: 'pointer', 
+                                                color: 'var(--color-danger)', 
+                                                padding: '2px',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'center'
+                                            }}
+                                            title={`Delete attendance for ${date}`}
+                                        >
+                                            <Trash2 size={12} />
+                                        </button>
                                     </div>
                                 </th>
                             ))}
@@ -1175,9 +1207,19 @@ export function CourseGradebook() {
                             onChange={e => setEditingActivity({...editingActivity, date: e.target.value})}
                         />
                     </div>
-                    <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end' }}>
-                        <button type="button" className="btn btn-secondary" onClick={() => setEditingActivity(null)}>Cancel</button>
-                        <button type="submit" className="btn">Save Changes</button>
+                    <div style={{ display: 'flex', gap: '1rem', justifyContent: 'space-between' }}>
+                         <button 
+                            type="button" 
+                            className="btn btn-secondary" 
+                            style={{ color: 'var(--color-danger)', borderColor: 'var(--color-danger)' }}
+                            onClick={() => handleDeleteActivity(editingActivity)}
+                        >
+                            <Trash2 size={16} style={{ marginRight: '6px' }}/> Delete
+                        </button>
+                        <div style={{ display: 'flex', gap: '1rem' }}>
+                            <button type="button" className="btn btn-secondary" onClick={() => setEditingActivity(null)}>Cancel</button>
+                            <button type="submit" className="btn">Save Changes</button>
+                        </div>
                     </div>
                 </form>
             </div>

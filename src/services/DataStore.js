@@ -233,6 +233,40 @@ export const DataStore = {
        }
   },
 
+  deleteActivity: (course, activityId) => {
+      const data = DataStore.load();
+      if (data.activities && data.activities[course]) {
+          // Remove activity definition
+          data.activities[course] = data.activities[course].filter(a => a.id !== activityId);
+          
+          // Remove grades for this activity
+          data.students.forEach(s => {
+              if (s.course === course && s.grades) {
+                  delete s.grades[activityId];
+              }
+          });
+          
+          DataStore.save(data);
+      }
+  },
+
+  deleteAttendanceColumn: (course, date) => {
+      const data = DataStore.load();
+      let changed = false;
+      data.students.forEach(s => {
+          if (s.course === course && s.attendance) {
+              // We just check if the key exists to mark changed, ensuring save is called if needed
+              if (Object.prototype.hasOwnProperty.call(s.attendance, date)) {
+                  delete s.attendance[date];
+                  changed = true;
+              }
+          }
+      });
+      if (changed) {
+          DataStore.save(data);
+      }
+  },
+
   // Materials
   getMaterials: (course) => {
     const data = DataStore.load();
