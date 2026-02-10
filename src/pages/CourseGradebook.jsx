@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { DataStore } from '../services/DataStore';
-import { Plus, Calendar, FileText, UserSquare2, ChevronLeft, Save, ArrowUpDown, Mail, GripVertical, Edit2, ArrowRight, Trash2, AlertTriangle, KeyRound } from 'lucide-react';
+import { Plus, Calendar, FileText, UserSquare2, ChevronLeft, Save, ArrowUpDown, Mail, GripVertical, Edit2, ArrowRight, Trash2, AlertTriangle, KeyRound, Lock, Unlock } from 'lucide-react';
 
 export function CourseGradebook() {
   const { courseId } = useParams();
@@ -467,6 +467,22 @@ export function CourseGradebook() {
       });
   };
 
+  const handleToggleLockActivity = (activity) => {
+      if (activity.locked) {
+          // Unlock -> Require Security
+          requestSecurityCheck(`unlock activity "${activity.name}"`, () => {
+               DataStore.updateActivity(courseId, { ...activity, locked: false });
+               refreshData();
+          });
+      } else {
+          // Lock -> Immediate
+          if (confirm(`Are you sure you want to lock "${activity.name}"? Grades will become read-only until unlocked with the security code.`)) {
+               DataStore.updateActivity(courseId, { ...activity, locked: true });
+               refreshData();
+          }
+      }
+  };
+
   return (
     <div>
       <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '2rem' }}>
@@ -714,19 +730,34 @@ export function CourseGradebook() {
                         {activities.map(act => (
                             <th 
                                 key={act.id} 
-                                style={{ minWidth: '100px', textAlign: 'center', cursor: 'pointer', transition: 'background 0.2s' }}
+                                style={{ minWidth: '100px', textAlign: 'center', cursor: 'pointer', transition: 'background 0.2s', background: act.locked ? '#fdfdfd' : 'transparent' }}
                                 className="hover-bg-gray"
                             >
                                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
+                                    <div style={{ display: 'flex', justifyContent: 'flex-end', width: '100%' }}>
+                                         <button 
+                                            onClick={(e) => { e.stopPropagation(); handleToggleLockActivity(act); }}
+                                            style={{ 
+                                                background: 'none', 
+                                                border: 'none', 
+                                                cursor: 'pointer', 
+                                                color: act.locked ? 'var(--color-danger)' : 'var(--color-text-secondary)',
+                                                padding: '2px'
+                                            }}
+                                            title={act.locked ? "Locked (Click to Unlock)" : "Unlocked (Click to Lock)"}
+                                        >
+                                            {act.locked ? <Lock size={14} /> : <Unlock size={14} />}
+                                        </button>
+                                    </div>
                                     <div 
-                                        onClick={() => setEditingActivity(act)}
-                                        title="Click to edit details"
-                                        style={{ fontSize: '0.75rem', color: 'var(--color-text-secondary)', fontWeight: 500 }}
+                                        onClick={() => !act.locked && setEditingActivity(act)}
+                                        title={act.locked ? "Locked" : "Click to edit details"}
+                                        style={{ fontSize: '0.75rem', color: 'var(--color-text-secondary)', fontWeight: 500, opacity: act.locked ? 0.7 : 1 }}
                                     >
                                         {act.date || 'Set Date'}
                                     </div>
                                     <div 
-                                        style={{ display: 'flex', alignItems: 'center', gap: '4px' }}
+                                        style={{ display: 'flex', alignItems: 'center', gap: '4px', opacity: act.locked ? 0.7 : 1 }}
                                         onClick={() => handleSort(act.id)}
                                     >
                                         {act.name}
@@ -829,6 +860,9 @@ export function CourseGradebook() {
                                                     }
                                                 }
                                             }}
+                                            disabled={act.locked}
+                                            readOnly={act.locked}
+                                            title={act.locked ? "This column is locked." : ""}
                                         />
                                     </div>
                                 </td>
