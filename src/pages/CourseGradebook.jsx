@@ -735,8 +735,8 @@ export function CourseGradebook() {
                             >
                                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', height: '100%', justifyContent: 'space-between' }}>
                                     
-                                    {/* Lock Icon - Top Right (absolute context if needed, but flex column is fine if consistent) */}
-                                    <div style={{ display: 'flex', justifyContent: 'flex-end', width: '100%', marginBottom: '2px' }}>
+                                    {/* Lock Icon - Centered */}
+                                    <div style={{ display: 'flex', justifyContent: 'center', width: '100%', marginBottom: '2px' }}>
                                          <button 
                                             onClick={(e) => { e.stopPropagation(); handleToggleLockActivity(act); }}
                                             style={{ 
