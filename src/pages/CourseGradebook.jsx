@@ -733,8 +733,10 @@ export function CourseGradebook() {
                                 style={{ minWidth: '100px', textAlign: 'center', cursor: 'pointer', transition: 'background 0.2s', background: act.locked ? '#fdfdfd' : 'transparent' }}
                                 className="hover-bg-gray"
                             >
-                                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
-                                    <div style={{ display: 'flex', justifyContent: 'flex-end', width: '100%' }}>
+                                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', height: '100%', justifyContent: 'space-between' }}>
+                                    
+                                    {/* Lock Icon - Top Right (absolute context if needed, but flex column is fine if consistent) */}
+                                    <div style={{ display: 'flex', justifyContent: 'flex-end', width: '100%', marginBottom: '2px' }}>
                                          <button 
                                             onClick={(e) => { e.stopPropagation(); handleToggleLockActivity(act); }}
                                             style={{ 
@@ -742,26 +744,48 @@ export function CourseGradebook() {
                                                 border: 'none', 
                                                 cursor: 'pointer', 
                                                 color: act.locked ? 'var(--color-danger)' : 'var(--color-text-secondary)',
-                                                padding: '2px'
+                                                padding: '2px',
+                                                display: 'flex', alignItems: 'center', justifyContent: 'center'
                                             }}
                                             title={act.locked ? "Locked (Click to Unlock)" : "Unlocked (Click to Lock)"}
                                         >
                                             {act.locked ? <Lock size={14} /> : <Unlock size={14} />}
                                         </button>
                                     </div>
-                                    <div 
-                                        onClick={() => !act.locked && setEditingActivity(act)}
-                                        title={act.locked ? "Locked" : "Click to edit details"}
-                                        style={{ fontSize: '0.75rem', color: 'var(--color-text-secondary)', fontWeight: 500, opacity: act.locked ? 0.7 : 1 }}
-                                    >
-                                        {act.date || 'Set Date'}
-                                    </div>
-                                    <div 
-                                        style={{ display: 'flex', alignItems: 'center', gap: '4px', opacity: act.locked ? 0.7 : 1 }}
-                                        onClick={() => handleSort(act.id)}
-                                    >
-                                        {act.name}
-                                        <ArrowUpDown size={14} color={sortConfig.key === act.id ? 'var(--color-accent)' : '#ccc'} />
+                                    
+                                    {/* Content Group */}
+                                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px' }}>
+                                        {/* Date */}
+                                        <div 
+                                            onClick={() => !act.locked && setEditingActivity(act)}
+                                            title={act.locked ? "Locked" : "Click to edit details"}
+                                            style={{ 
+                                                fontSize: '0.7rem', 
+                                                color: 'var(--color-text-secondary)', 
+                                                fontWeight: 500, 
+                                                opacity: act.locked ? 0.7 : 1,
+                                                whiteSpace: 'nowrap'
+                                            }}
+                                        >
+                                            {act.date || 'Set Date'}
+                                        </div>
+
+                                        {/* Name (Truncated) */}
+                                        <div 
+                                            style={{ 
+                                                display: 'flex', 
+                                                alignItems: 'center', 
+                                                gap: '4px', 
+                                                opacity: act.locked ? 0.7 : 1,
+                                                fontSize: '0.85rem',
+                                                fontWeight: 600
+                                            }}
+                                            onClick={() => handleSort(act.id)}
+                                            title={act.name} // Full name on hover
+                                        >
+                                            {act.name.length > 10 ? `${act.name.substring(0, 10)}...` : act.name}
+                                            <ArrowUpDown size={12} color={sortConfig.key === act.id ? 'var(--color-accent)' : '#ccc'} />
+                                        </div>
                                     </div>
                                 </div>
                             </th>
