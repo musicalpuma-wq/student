@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { DataStore } from '../services/DataStore';
 import { Link, useNavigate } from 'react-router-dom';
-import { Plus, BookOpen, Clock, User, UserSquare2, FileText } from 'lucide-react';
+import { Plus, BookOpen, Clock, User, UserSquare2, FileText, ChevronRight } from 'lucide-react';
 import { useSettings } from '../context/SettingsContext';
 
 export function Dashboard() {
