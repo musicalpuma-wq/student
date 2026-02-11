@@ -88,9 +88,9 @@ export function SettingsModal({ onClose }) {
                 </button>
             </div>
             
-            {/* Content */}
-            <div style={{ flex: 1, padding: '2rem', background: 'var(--color-bg-primary)' }}>
+            <div style={{ flex: 1, padding: '2rem', background: 'var(--color-bg-primary)', display: 'flex', flexDirection: 'column' }}>
                 
+                <div style={{ flex: 1 }}>
                 {activeTab === 'general' && (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
                         <div>
@@ -216,6 +216,14 @@ export function SettingsModal({ onClose }) {
                         </form>
                      </div>
                 )}
+                </div>
+
+                {/* Save & Exit Button */}
+                <div style={{ marginTop: '2rem', paddingTop: '1rem', borderTop: '1px solid var(--color-border)', display: 'flex', justifyContent: 'flex-end' }}>
+                    <button onClick={onClose} className="btn">
+                        {t('saveAndExit')}
+                    </button>
+                </div>
             </div>
         </div>
       </div>

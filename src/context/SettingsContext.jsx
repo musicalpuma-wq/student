@@ -46,13 +46,13 @@ export function SettingsProvider({ children }) {
   }, [settings.themeMode]);
 
   useEffect(() => {
-    // Apply theme class to body
-    document.body.setAttribute('data-theme', currentTheme);
+    // Apply theme class to html root
+    document.documentElement.setAttribute('data-theme', currentTheme);
     // Also toggle a class for easier CSS targeting if needed
     if (currentTheme === 'dark') {
-        document.body.classList.add('dark-mode');
+        document.documentElement.classList.add('dark-mode');
     } else {
-        document.body.classList.remove('dark-mode');
+        document.documentElement.classList.remove('dark-mode');
     }
   }, [currentTheme]);
 

@@ -2,9 +2,11 @@ import { useState, useEffect } from 'react';
 import { DataStore } from '../services/DataStore';
 import { useNavigate } from 'react-router-dom';
 import { Save, X } from 'lucide-react';
+import { useSettings } from '../context/SettingsContext';
 
 export function StudentRegistration() {
   const navigate = useNavigate();
+  const { t } = useSettings();
   const [formData, setFormData] = useState({
     name: '',
     course: '',
@@ -58,7 +60,7 @@ export function StudentRegistration() {
   const handleSubmit = (e) => {
     e.preventDefault();
     DataStore.addStudent(formData);
-    alert('Student Registered Successfully!');
+    alert(t('studentRegistered'));
     setFormData({
       name: '',
       course: '',
@@ -76,15 +78,15 @@ export function StudentRegistration() {
   return (
     <div style={{ maxWidth: '600px', margin: '0 auto' }}>
       <header style={{ marginBottom: '2rem' }}>
-        <h1 style={{ fontSize: '2rem' }}>Register Student</h1>
-        <p style={{ color: '#86868b' }}>Enter the student's details below.</p>
+        <h1 style={{ fontSize: '2rem' }}>{t('registerTitle')}</h1>
+        <p style={{ color: 'var(--color-text-secondary)' }}>{t('registerSubtitle')}</p>
       </header>
 
       <div className="card">
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
           
           <div style={{ display: 'grid', gap: '0.5rem' }}>
-            <label style={{ fontSize: '0.9rem', fontWeight: 500 }}>Full Name</label>
+            <label style={{ fontSize: '0.9rem', fontWeight: 500 }}>{t('fullName')}</label>
             <input 
               className="input-field"
               name="name" 
@@ -96,7 +98,7 @@ export function StudentRegistration() {
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
             <div style={{ display: 'grid', gap: '0.5rem' }}>
-              <label style={{ fontSize: '0.9rem', fontWeight: 500 }}>Course</label>
+              <label style={{ fontSize: '0.9rem', fontWeight: 500 }}>{t('course')}</label>
               <select 
                 className="input-field"
                 name="course" 
@@ -104,7 +106,7 @@ export function StudentRegistration() {
                 onChange={handleChange}
                 required 
               >
-                  <option value="">Select Course...</option>
+                  <option value="">{t('selectCourse')}</option>
                   {courses.map(c => (
                       <option key={c} value={c}>{c}</option>
                   ))}
@@ -113,7 +115,7 @@ export function StudentRegistration() {
             
             <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '0.5rem' }}>
                <div style={{ display: 'grid', gap: '0.5rem' }}>
-                  <label style={{ fontSize: '0.9rem', fontWeight: 500 }}>Date of Birth</label>
+                  <label style={{ fontSize: '0.9rem', fontWeight: 500 }}>{t('dob')}</label>
                   <input 
                     className="input-field"
                     name="birthDate" 
@@ -124,12 +126,12 @@ export function StudentRegistration() {
                   />
                </div>
                <div style={{ display: 'grid', gap: '0.5rem' }}>
-                  <label style={{ fontSize: '0.9rem', fontWeight: 500 }}>Age</label>
+                  <label style={{ fontSize: '0.9rem', fontWeight: 500 }}>{t('age')}</label>
                   <input 
                     className="input-field"
                     value={formData.age || ''}
                     readOnly
-                    style={{ backgroundColor: '#f5f5f7', color: '#666' }}
+                    style={{ backgroundColor: 'var(--color-bg-body)', color: 'var(--color-text-secondary)' }}
                     title="Auto-calculated from DOB"
                   />
                </div>
@@ -138,13 +140,13 @@ export function StudentRegistration() {
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
             <div style={{ display: 'grid', gap: '0.5rem' }}>
-              <label style={{ fontSize: '0.9rem', fontWeight: 500 }}>Jornada</label>
+              <label style={{ fontSize: '0.9rem', fontWeight: 500 }}>{t('jornada')}</label>
               <select 
                   className="input-field" 
                   name="jornada" 
                   value={formData.jornada} 
                   disabled // Locked
-                  style={{ backgroundColor: '#f5f5f7', color: '#888' }}
+                  style={{ backgroundColor: 'var(--color-bg-body)', color: 'var(--color-text-secondary)' }}
               >
                  <option value="Mañana">Mañana</option>
                  <option value="Tarde">Tarde</option>
@@ -152,7 +154,7 @@ export function StudentRegistration() {
             </div>
             
             <div style={{ display: 'grid', gap: '0.5rem' }}>
-              <label style={{ fontSize: '0.9rem', fontWeight: 500 }}>VPS Code</label>
+              <label style={{ fontSize: '0.9rem', fontWeight: 500 }}>{t('vpsCode')}</label>
               <input 
                 className="input-field"
                 name="vpsCode" 
@@ -165,7 +167,7 @@ export function StudentRegistration() {
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
             <div style={{ display: 'grid', gap: '0.5rem' }}>
-              <label style={{ fontSize: '0.9rem', fontWeight: 500 }}>Parent Name</label>
+              <label style={{ fontSize: '0.9rem', fontWeight: 500 }}>{t('parentName')}</label>
               <input 
                 className="input-field"
                 name="parentName" 
@@ -177,7 +179,7 @@ export function StudentRegistration() {
             </div>
             
             <div style={{ display: 'grid', gap: '0.5rem' }}>
-              <label style={{ fontSize: '0.9rem', fontWeight: 500 }}>Parent Phone</label>
+              <label style={{ fontSize: '0.9rem', fontWeight: 500 }}>{t('parentPhone')}</label>
               <input 
                 className="input-field"
                 name="parentPhone" 
@@ -190,7 +192,7 @@ export function StudentRegistration() {
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
             <div style={{ display: 'grid', gap: '0.5rem' }}>
-              <label style={{ fontSize: '0.9rem', fontWeight: 500 }}>Parent Phone 2</label>
+              <label style={{ fontSize: '0.9rem', fontWeight: 500 }}>{t('parentPhone2')}</label>
               <input 
                 className="input-field"
                 name="parentPhone2" 
@@ -201,7 +203,7 @@ export function StudentRegistration() {
             </div>
             
             <div style={{ display: 'grid', gap: '0.5rem' }}>
-              <label style={{ fontSize: '0.9rem', fontWeight: 500 }}>Parent Email</label>
+              <label style={{ fontSize: '0.9rem', fontWeight: 500 }}>{t('parentEmail')}</label>
               <input 
                 className="input-field"
                 name="parentEmail" 
@@ -214,7 +216,7 @@ export function StudentRegistration() {
           </div>
 
           <div style={{ display: 'grid', gap: '0.5rem' }}>
-            <label style={{ fontSize: '0.9rem', fontWeight: 500 }}>General Observations</label>
+            <label style={{ fontSize: '0.9rem', fontWeight: 500 }}>{t('genObs')}</label>
             <textarea 
                 className="input-field" 
                 name="genericObs" 
@@ -228,14 +230,14 @@ export function StudentRegistration() {
           <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem' }}>
             <button type="submit" className="btn" style={{ flex: 1 }}>
               <Save size={18} style={{ marginRight: '8px' }} />
-              Save Student
+              {t('saveStudent')}
             </button>
             <button 
               type="button" 
               className="btn btn-secondary" 
               onClick={() => navigate('/')}
             >
-              Cancel
+              {t('cancel')}
             </button>
           </div>
 

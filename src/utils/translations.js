@@ -113,13 +113,44 @@ export const translations = {
     lockActivityConfirm: "¿Desea bloquear esta actividad?",
     unlockActivityConfirm: "Ingrese código para desbloquear",
     
+    // Dashboard Cards
+    yourCourses: "Tus Cursos",
+    director: "Director",
+    schedule: "Horario",
+    studentsCount: "Estudiantes",
+    clickToView: "Clic para ver planilla",
+
+    // Student Registration
+    registerTitle: "Registrar Estudiante",
+    registerSubtitle: "Ingrese los datos del estudiante a continuación.",
+    fullName: "Nombre Completo",
+    course: "Curso",
+    dob: "Fecha de Nacimiento",
+    age: "Edad",
+    jornada: "Jornada",
+    vpsCode: "Código VPS",
+    parentName: "Nombre Acudiente",
+    parentPhone: "Teléfono Acudiente",
+    parentPhone2: "Teléfono Alterno",
+    parentEmail: "Correo Acudiente",
+    genObs: "Observaciones Generales",
+    saveStudent: "Guardar Estudiante",
+    studentRegistered: "¡Estudiante registrado exitosamente!",
+
     // Downloads
-    downloads: "Descargas",
-    downloadReport: "Descargar Reporte",
-    selectReportType: "Tipo de Reporte",
+    downloadsTitle: "Descargas",
+    downloadsSubtitle: "Generar y descargar reportes PDF.",
+    selectReportType: "1. Tipo de Reporte",
+    reportStudentList: "Lista de Estudiantes",
     reportGradebook: "Planilla de Notas",
-    reportAttendance: "Planilla de Asistencia",
-    includeArchived: "Incluir Archivados"
+    includeFields: "Incluir Campos:",
+    selectScope: "2. Seleccionar Alcance",
+    allCourses: "Todos los Cursos",
+    specificCourse: "Curso Específico:",
+    downloadPDF: "Descargar PDF",
+
+    // Settings
+    saveAndExit: "Guardar y Salir"
   },
   en: {
     // General
@@ -235,12 +266,43 @@ export const translations = {
     lockActivityConfirm: "Do you want to lock this activity?",
     unlockActivityConfirm: "Enter code to unlock",
 
+    // Dashboard Cards
+    yourCourses: "Your Courses",
+    director: "Director",
+    schedule: "Schedule",
+    studentsCount: "Students",
+    clickToView: "Click to view gradebook",
+
+    // Student Registration
+    registerTitle: "Register Student",
+    registerSubtitle: "Enter the student's details below.",
+    fullName: "Full Name",
+    course: "Course",
+    dob: "Date of Birth",
+    age: "Age",
+    jornada: "Jornada",
+    vpsCode: "VPS Code",
+    parentName: "Parent Name",
+    parentPhone: "Parent Phone",
+    parentPhone2: "Parent Phone 2",
+    parentEmail: "Parent Email",
+    genObs: "General Observations",
+    saveStudent: "Save Student",
+    studentRegistered: "Student Registered Successfully!",
+
     // Downloads
-    downloads: "Downloads",
-    downloadReport: "Download Report",
-    selectReportType: "Report Type",
+    downloadsTitle: "Downloads",
+    downloadsSubtitle: "Generate and download PDF reports.",
+    selectReportType: "1. Select Report Type",
+    reportStudentList: "Student List",
     reportGradebook: "Gradebook",
-    reportAttendance: "Attendance Sheet",
-    includeArchived: "Include Archived"
+    includeFields: "Include Fields:",
+    selectScope: "2. Select Scope",
+    allCourses: "All Courses",
+    specificCourse: "Specific Course:",
+    downloadPDF: "Download PDF",
+
+    // Settings
+    saveAndExit: "Save & Exit"
   }
 };

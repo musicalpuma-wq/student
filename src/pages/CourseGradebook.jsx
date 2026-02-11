@@ -1075,13 +1075,13 @@ export function CourseGradebook() {
                             style={{ width: '100px', cursor: 'pointer' }}
                             onClick={() => handleSort('vps')}
                          >
-                            VPS
+                            {t('vps')}
                          </th>
                          <th 
                             style={{ width: '250px', cursor: 'pointer' }}
                             onClick={() => handleSort('name')}
                          >
-                            Student Name
+                            {t('studentName')}
                          </th>
                          {materials.map(mat => (
                              <th key={mat.id} style={{ minWidth: '150px' }}>
@@ -1126,7 +1126,7 @@ export function CourseGradebook() {
                                     <input 
                                         className="input-field"
                                         style={{ width: '100%', fontSize: '0.9rem' }}
-                                        placeholder="Assign..."
+                                        placeholder={t('assign') || "Assign..."}
                                         value={student.materials?.[mat.id] || ''}
                                         onChange={(e) => handleMaterialValueChange(student, mat.id, e.target.value)}
                                     />
@@ -1148,12 +1148,12 @@ export function CourseGradebook() {
                             onClick={() => handleSort('name')}
                         >
                             <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                Student Name
+                                {t('studentName')}
                                 {sortConfig.key === 'name' && <ArrowUpDown size={14} />}
                             </div>
                         </th>
-                        <th>Observations</th>
-                        <th style={{ width: '100px' }}>Action</th>
+                        <th>{t('observations') || "Observations"}</th>
+                        <th style={{ width: '100px' }}>{t('action') || "Action"}</th>
                     </tr>
                 </thead>
                 <tbody>

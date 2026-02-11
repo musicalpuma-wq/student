@@ -2,8 +2,10 @@ import { useState, useEffect } from 'react';
 import { DataStore } from '../services/DataStore';
 import { PDFGenerator } from '../services/PDFGenerator';
 import { Download, FileText, CheckCircle2 } from 'lucide-react';
+import { useSettings } from '../context/SettingsContext';
 
 export function Downloads() {
+  const { t } = useSettings();
   const [courses, setCourses] = useState([]);
   const [reportType, setReportType] = useState('students'); // 'students' | 'grades'
   const [scope, setScope] = useState('all'); // 'all' | courseId
@@ -38,12 +40,12 @@ export function Downloads() {
 
   return (
     <div style={{ maxWidth: '800px', margin: '0 auto' }}>
-        <h1 style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>Downloads</h1>
-        <p style={{ color: 'var(--color-text-secondary)', marginBottom: '2rem' }}>Generate and download PDF reports.</p>
+        <h1 style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>{t('downloadsTitle')}</h1>
+        <p style={{ color: 'var(--color-text-secondary)', marginBottom: '2rem' }}>{t('downloadsSubtitle')}</p>
 
         <div className="card" style={{ padding: '2rem' }}>
             {/* Report Type */}
-            <h3 style={{ marginBottom: '1rem', borderBottom: '1px solid #eee', paddingBottom: '0.5rem' }}>1. Select Report Type</h3>
+            <h3 style={{ marginBottom: '1rem', borderBottom: '1px solid var(--color-border)', paddingBottom: '0.5rem' }}>{t('selectReportType')}</h3>
             <div style={{ display: 'flex', gap: '2rem', marginBottom: '2rem' }}>
                 <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '1.1rem' }}>
                     <input 
@@ -54,7 +56,7 @@ export function Downloads() {
                         onChange={() => setReportType('students')}
                         style={{ width: '18px', height: '18px' }}
                     />
-                    Student List
+                    {t('reportStudentList')}
                 </label>
                 <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '1.1rem' }}>
                     <input 
@@ -65,14 +67,14 @@ export function Downloads() {
                         onChange={() => setReportType('grades')}
                         style={{ width: '18px', height: '18px' }}
                     />
-                    Gradebook
+                    {t('reportGradebook')}
                 </label>
             </div>
 
             {/* Field Selection (Only for Student List) */}
             {reportType === 'students' && (
-                <div style={{ marginBottom: '2rem', background: '#f9f9f9', padding: '1.5rem', borderRadius: '8px' }}>
-                    <h4 style={{ margin: '0 0 1rem', fontSize: '1rem' }}>Include Fields:</h4>
+                <div style={{ marginBottom: '2rem', background: 'var(--color-bg-body)', padding: '1.5rem', borderRadius: '8px' }}>
+                    <h4 style={{ margin: '0 0 1rem', fontSize: '1rem' }}>{t('includeFields')}</h4>
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '1rem' }}>
                         {Object.keys(selectedFields).map(key => (
                             <label key={key} style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
@@ -89,7 +91,7 @@ export function Downloads() {
             )}
 
             {/* Scope Selection */}
-            <h3 style={{ marginBottom: '1rem', borderBottom: '1px solid #eee', paddingBottom: '0.5rem' }}>2. Select Scope</h3>
+            <h3 style={{ marginBottom: '1rem', borderBottom: '1px solid var(--color-border)', paddingBottom: '0.5rem' }}>{t('selectScope')}</h3>
             <div style={{ marginBottom: '2rem' }}>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                     <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
@@ -100,7 +102,7 @@ export function Downloads() {
                             checked={scope === 'all'}
                             onChange={() => setScope('all')}
                         />
-                        All Courses
+                        {t('allCourses')}
                     </label>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
                          <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
@@ -111,7 +113,7 @@ export function Downloads() {
                                 checked={scope !== 'all'}
                                 onChange={() => setScope(courses[0] || '')}
                             />
-                            Specific Course:
+                            {t('specificCourse')}
                         </label>
                         <select 
                             className="input-field" 
@@ -136,7 +138,7 @@ export function Downloads() {
                     style={{ padding: '0.8rem 2rem', fontSize: '1.1rem', display: 'flex', alignItems: 'center', gap: '10px' }}
                 >
                     <Download size={24} />
-                    Download PDF
+                    {t('downloadPDF')}
                 </button>
             </div>
         </div>
