@@ -3,6 +3,7 @@ const STORAGE_KEY = 'sms_data_v1';
 const initialData = {
   students: [],
   courses: [], // Explicit list of course names
+  courseDetails: {}, // { courseName: { director, schedule } }
   activities: {}, // { courseId: [ { id, name, maxGrade } ] }
   materials: {}, // { courseId: [ { id, name } ] }
 };
@@ -15,6 +16,7 @@ export const DataStore = {
     
     // Migration for existing data without materials
     if (!parsed.materials) parsed.materials = {};
+    if (!parsed.courseDetails) parsed.courseDetails = {};
     
     // Migration for explicit courses
     if (!parsed.courses) {
@@ -128,12 +130,34 @@ export const DataStore = {
     const data = DataStore.load();
     return data.courses || [];
   },
-
-  addCourse: (courseName) => {
+  
+  getCourseDetails: (courseName) => {
       const data = DataStore.load();
+      return data.courseDetails?.[courseName] || { director: '', schedule: '' };
+  },
+
+  addCourse: (courseName, details = {}) => {
+      const data = DataStore.load();
+      // Ensure courseDetails exists
+      if (!data.courseDetails) data.courseDetails = {};
+      
+      let saved = false;
       if (!data.courses.includes(courseName)) {
           data.courses.push(courseName);
           data.courses.sort();
+          saved = true;
+      }
+      
+      // Always update details if provided or new
+      if (details.director !== undefined || details.schedule !== undefined) {
+         data.courseDetails[courseName] = {
+             director: details.director || '',
+             schedule: details.schedule || ''
+         };
+         saved = true;
+      }
+
+      if (saved) {
           DataStore.save(data);
           return true;
       }
@@ -178,8 +202,24 @@ export const DataStore = {
       data.materials[newName] = data.materials[oldName];
       delete data.materials[oldName];
     }
+    
+    // 5. Update Details
+    if (data.courseDetails && data.courseDetails[oldName]) {
+        data.courseDetails[newName] = data.courseDetails[oldName];
+        delete data.courseDetails[oldName];
+    }
 
     DataStore.save(data);
+  },
+  
+  updateCourseDetails: (courseName, details) => {
+      const data = DataStore.load();
+      if (!data.courseDetails) data.courseDetails = {};
+      data.courseDetails[courseName] = {
+          ...data.courseDetails[courseName],
+          ...details
+      };
+      DataStore.save(data);
   },
 
   // Delete Course
@@ -200,6 +240,11 @@ export const DataStore = {
     // 4. Remove materials
     if (data.materials && data.materials[courseName]) {
       delete data.materials[courseName];
+    }
+    
+    // 5. Remove details
+    if (data.courseDetails && data.courseDetails[courseName]) {
+        delete data.courseDetails[courseName];
     }
 
     DataStore.save(data);
@@ -305,10 +350,16 @@ export const DataStore = {
     
     DataStore.save({
         students: mockStudents,
+        courses: ['6-A', '6-B'],
+        courseDetails: {
+            '6-A': { director: 'Mr. Smith', schedule: 'Mon 8-10am' },
+            '6-B': { director: 'Mrs. Johnson', schedule: 'Tue 10-12pm' }
+        },
         activities: {
             '6-A': [{ id: 'act1', name: 'Math Exam' }, { id: 'act2', name: 'History Essay' }],
             '6-B': [{ id: 'act3', name: 'Science Lab' }]
-        }
+        },
+        materials: {}
     });
   }
 };

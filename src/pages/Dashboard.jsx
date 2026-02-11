@@ -1,12 +1,21 @@
 import { useState, useEffect } from 'react';
 import { DataStore } from '../services/DataStore';
 import { Link, useNavigate } from 'react-router-dom';
-import { Users, ChevronRight, GraduationCap, Plus } from 'lucide-react';
+import { Users, ChevronRight, GraduationCap, Plus, BookOpen, Clock, User } from 'lucide-react';
 
 export function Dashboard() {
   const navigate = useNavigate();
   const [courses, setCourses] = useState([]);
   const [stats, setStats] = useState({ totalStudents: 0, totalCourses: 0 });
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState([]);
+  
+  // Create Course State
+  const [showCreateCourseModal, setShowCreateCourseModal] = useState(false);
+  const [newCourseGrade, setNewCourseGrade] = useState('');
+  const [newCourseJornada, setNewCourseJornada] = useState('JM'); // JM or JT
+  const [newCourseDirector, setNewCourseDirector] = useState('');
+  const [newCourseSchedule, setNewCourseSchedule] = useState('');
 
   useEffect(() => {
     // Check if we need to seed data
@@ -28,29 +37,26 @@ export function Dashboard() {
 
   const calculateCourseStats = (courseName) => {
       const students = DataStore.getStudentsByCourse(courseName);
-      if (students.length === 0) return { avg: 0, failing: 0 };
+      if (students.length === 0) return { avg: "0.0", failing: 0 };
 
       const studentAverages = students.map(s => {
           const grades = Object.values(s.grades).map(v => parseFloat(v)).filter(v => !isNaN(v));
+          // If no grades, we treat as 0 or ignore? User said empty cells = 1.0 in Gradebook, 
+          // but for general stats maybe we only count graded ones?
+          // Let's stick to the logic used in Gradebook: empty/missing = 1.0 if we are strictly calculating course performance?
+          // Actually, in dashboard usually we want "current standing". 
+          // Let's use the average of existing grades.
           if (grades.length === 0) return null;
           return grades.reduce((a, b) => a + b, 0) / grades.length;
       }).filter(a => a !== null);
 
-      if (studentAverages.length === 0) return { avg: 0, failing: 0 };
+      if (studentAverages.length === 0) return { avg: "0.0", failing: 0 };
 
       const courseAvg = studentAverages.reduce((a, b) => a + b, 0) / studentAverages.length;
       const failingCount = studentAverages.filter(a => a < 3.0).length;
 
       return { avg: courseAvg.toFixed(1), failing: failingCount };
   };
-
-  const [searchQuery, setSearchQuery] = useState('');
-  const [searchResults, setSearchResults] = useState([]);
-  
-  // Create Course State
-  const [showCreateCourseModal, setShowCreateCourseModal] = useState(false);
-  const [newCourseGrade, setNewCourseGrade] = useState('');
-  const [newCourseJornada, setNewCourseJornada] = useState('JM'); // JM or JT
 
   useEffect(() => {
     if (searchQuery.trim().length > 1) {
@@ -69,7 +75,11 @@ export function Dashboard() {
       e.preventDefault();
       if (newCourseGrade && newCourseJornada) {
           const courseName = `${newCourseGrade}-${newCourseJornada}`;
-          const success = DataStore.addCourse(courseName);
+          const success = DataStore.addCourse(courseName, {
+              director: newCourseDirector,
+              schedule: newCourseSchedule
+          });
+          
           if (success) {
               setCourses(DataStore.getCourses());
               setStats({
@@ -79,6 +89,8 @@ export function Dashboard() {
               setShowCreateCourseModal(false);
               setNewCourseGrade('');
               setNewCourseJornada('JM');
+              setNewCourseDirector('');
+              setNewCourseSchedule('');
               alert(`Course ${courseName} created successfully!`);
           } else {
               alert(`Course ${courseName} already exists.`);
@@ -88,59 +100,86 @@ export function Dashboard() {
 
   return (
     <div>
-      <header style={{ marginBottom: '2.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
+      <header style={{ marginBottom: '2.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', flexWrap: 'wrap', gap: '1rem' }}>
         <div>
             <h1 style={{ fontSize: '2.5rem', letterSpacing: '-0.5px' }}>Dashboard</h1>
             <p style={{ color: 'var(--color-text-secondary)', fontSize: '1.1rem' }}>
             Welcome back. Here is an overview of your classes.
             </p>
         </div>
-        <div style={{ minWidth: '250px', position: 'relative' }}>
-            <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: 'var(--color-text-secondary)', marginBottom: '0.5rem' }}>
-                Quick Search
-            </label>
-            <input 
-                type="text"
-                placeholder="Search Student..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                style={{ 
-                    width: '100%', 
-                    padding: '0.6rem', 
-                    borderRadius: '8px', 
-                    border: '1px solid var(--color-border)',
-                    fontSize: '0.9rem'
-                }}
-            />
-            {searchResults.length > 0 && (
-                <div style={{
-                    position: 'absolute',
-                    top: '100%',
-                    left: 0,
-                    right: 0,
-                    background: 'white',
-                    border: '1px solid var(--color-border)',
-                    borderRadius: '8px',
-                    marginTop: '4px',
-                    boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)',
-                    zIndex: 10
-                }}>
-                    {searchResults.map(s => (
-                        <div 
-                            key={s.id}
-                            onClick={() => navigate(`/course/${s.course}`)}
-                            style={{ padding: '8px 12px', cursor: 'pointer', borderBottom: '1px solid #eee' }}
-                        >
-                            <div style={{ fontWeight: 500 }}>{s.name}</div>
-                            <div style={{ fontSize: '0.8rem', color: '#666' }}>{s.course} • {s.vpsCode || '-'}</div>
-                        </div>
-                    ))}
-                </div>
-            )}
+        
+        <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-end' }}>
+             {/* Quick Course Access */}
+             <div style={{ minWidth: '200px' }}>
+                <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: 'var(--color-text-secondary)', marginBottom: '0.5rem' }}>
+                    Quick Access
+                </label>
+                <select 
+                    onChange={(e) => {
+                        if (e.target.value) navigate(`/course/${e.target.value}`);
+                    }}
+                    style={{ 
+                        width: '100%', 
+                        padding: '0.6rem', 
+                        borderRadius: '8px', 
+                        border: '1px solid var(--color-border)',
+                        fontSize: '0.9rem',
+                        background: 'white',
+                         cursor: 'pointer'
+                    }}
+                    defaultValue=""
+                >
+                    <option value="" disabled>Select Course...</option>
+                    {courses.map(c => <option key={c} value={c}>{c}</option>)}
+                </select>
+             </div>
+
+            {/* Student Search */}
+            <div style={{ minWidth: '250px', position: 'relative' }}>
+                <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: 'var(--color-text-secondary)', marginBottom: '0.5rem' }}>
+                    Quick Search
+                </label>
+                <input 
+                    type="text"
+                    placeholder="Search Student..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    style={{ 
+                        width: '100%', 
+                        padding: '0.6rem', 
+                        borderRadius: '8px', 
+                        border: '1px solid var(--color-border)',
+                        fontSize: '0.9rem'
+                    }}
+                />
+                {searchResults.length > 0 && (
+                    <div style={{
+                        position: 'absolute',
+                        top: '100%',
+                        left: 0,
+                        right: 0,
+                        background: 'white',
+                        border: '1px solid var(--color-border)',
+                        borderRadius: '8px',
+                        marginTop: '4px',
+                        boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)',
+                        zIndex: 10
+                    }}>
+                        {searchResults.map(s => (
+                            <div 
+                                key={s.id}
+                                onClick={() => navigate(`/course/${s.course}`)}
+                                style={{ padding: '8px 12px', cursor: 'pointer', borderBottom: '1px solid #eee' }}
+                            >
+                                <div style={{ fontWeight: 500 }}>{s.name}</div>
+                                <div style={{ fontSize: '0.8rem', color: '#666' }}>{s.course} • {s.vpsCode || '-'}</div>
+                            </div>
+                        ))}
+                    </div>
+                )}
+            </div>
         </div>
       </header>
-      
-      {/* Quick Access Logic Hook - I'll actually add useNavigate above */}
       
       {/* Stats Row */}
       <div style={{ 
@@ -169,6 +208,65 @@ export function Dashboard() {
           </div>
         </div>
       </div>
+      
+      {/* Performance Chart */}
+      {courses.length > 0 && (
+        <div className="card" style={{ marginBottom: '3rem', padding: '2rem' }}>
+            <h3 style={{ fontSize: '1.2rem', marginBottom: '1.5rem', color: 'var(--color-text-primary)' }}>Course Performance Overview</h3>
+            <div style={{ 
+                display: 'flex', 
+                alignItems: 'flex-end', 
+                gap: '2rem', 
+                height: '250px', 
+                overflowX: 'auto',
+                paddingBottom: '1rem'
+            }}>
+                {courses.map(course => {
+                    const stats = calculateCourseStats(course);
+                    const avg = parseFloat(stats.avg);
+                    const heightPercent = Math.min((avg / 5) * 100, 100);
+                    
+                    // Gradient Logic
+                    // User: "si el rendimiento está por debajo de 3,0 la barra debe pasar a ser roja, y por encima de 3,0 debe pasar a ser verde, mejor si se hace en degradado de rojo a verde."
+                    const isFailing = avg < 3.0;
+                    
+                    // Let's use a dynamic color based on value.
+                    // A simple conditional static color or gradient is safer.
+                    const finalBg = avg < 3.0 
+                        ? 'linear-gradient(180deg, #FF453A 0%, #FF9F0A 100%)' 
+                        : 'linear-gradient(180deg, #32D74B 0%, #30D158 100%)';
+
+                    return (
+                        <div key={course} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem', minWidth: '40px' }}>
+                             <div style={{ 
+                                 fontWeight: 700, 
+                                 fontSize: '0.8rem', 
+                                 color: avg < 3.0 ? 'var(--color-danger)' : 'var(--color-success)'
+                             }}>
+                                 {stats.avg}
+                             </div>
+                             <div 
+                                style={{ 
+                                    width: '30px', 
+                                    height: `${heightPercent}%`, 
+                                    background: finalBg,
+                                    borderRadius: '6px 6px 0 0',
+                                    transition: 'height 0.5s ease',
+                                    opacity: 0.9
+                                }} 
+                                title={`${course}: ${stats.avg}`}
+                             />
+                             <div style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)', fontSize: '0.85rem', fontWeight: 500, color: 'var(--color-text-secondary)', marginTop: '0.5rem' }}>
+                                 {course}
+                             </div>
+                        </div>
+                    );
+                })}
+            </div>
+            {/* Axis/Legend line */}
+            <div style={{ width: '100%', height: '1px', background: 'var(--color-border)', marginTop: '-1rem', position: 'relative', zIndex: -1 }} />
+        </div>
+      )}
 
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
         <h3 style={{ fontSize: '1.5rem', margin: 0 }}>Your Courses</h3>
@@ -190,9 +288,9 @@ export function Dashboard() {
             const studentCount = DataStore.getStudentsByCourse(course).length;
             const { avg, failing } = calculateCourseStats(course);
             const numAvg = parseFloat(avg);
+            const courseDetails = DataStore.getCourseDetails(course);
             
-            // Simple Pie Chart as Conic Gradient
-            // 5.0 is max. Let's say the green part is the average percentage. (Avg/5 * 100)
+            // Percentage for pie
             const percentage = (numAvg / 5) * 100;
             const chartColor = numAvg < 3.0 ? 'var(--color-danger)' : 'var(--color-success)';
             
@@ -227,6 +325,20 @@ export function Dashboard() {
                           Course
                         </div>
                         <h2 style={{ fontSize: '1.8rem', marginBottom: '0.2rem' }}>{course}</h2>
+                        
+                        <div style={{ marginBottom: '0.5rem', color: 'var(--color-text-secondary)', fontSize: '0.85rem' }}>
+                            {courseDetails.director && (
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }} title="Director">
+                                    <User size={14} /> {courseDetails.director}
+                                </div>
+                            )}
+                            {courseDetails.schedule && (
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginTop: '2px' }} title="Schedule">
+                                    <Clock size={14} /> {courseDetails.schedule}
+                                </div>
+                            )}
+                        </div>
+                        
                         <p style={{ color: 'var(--color-text-secondary)', fontSize: '0.9rem' }}>{studentCount} Students</p>
                       </div>
                       
@@ -302,34 +414,58 @@ export function Dashboard() {
             position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
             background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000
         }}>
-            <div className="card" style={{ width: '350px', padding: '2rem' }}>
+            <div className="card" style={{ width: '400px', padding: '2rem' }}>
                 <h3 style={{ marginBottom: '1.5rem' }}>Create New Course</h3>
                 <form onSubmit={handleCreateCourse}>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
+                        <div>
+                            <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.9rem', fontWeight: 500 }}>Grade / Curso</label>
+                            <input 
+                                className="input-field"
+                                placeholder="e.g. 901"
+                                value={newCourseGrade}
+                                onChange={(e) => setNewCourseGrade(e.target.value)}
+                                required
+                                autoFocus
+                            />
+                        </div>
+                        <div>
+                            <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.9rem', fontWeight: 500 }}>Jornada</label>
+                            <select 
+                                className="input-field"
+                                value={newCourseJornada}
+                                onChange={(e) => setNewCourseJornada(e.target.value)}
+                            >
+                                <option value="JM">JM (Mañana)</option>
+                                <option value="JT">JT (Tarde)</option>
+                            </select>
+                        </div>
+                    </div>
+                    
                     <div style={{ marginBottom: '1rem' }}>
-                        <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.9rem', fontWeight: 500 }}>Grade / Curso</label>
-                        <input 
-                            className="input-field"
-                            placeholder="e.g. 901"
-                            value={newCourseGrade}
-                            onChange={(e) => setNewCourseGrade(e.target.value)}
-                            required
-                            autoFocus
-                        />
+                         <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.9rem', fontWeight: 500 }}>Course Director</label>
+                         <input 
+                             className="input-field"
+                             placeholder="e.g. Maria Gonzalez"
+                             value={newCourseDirector}
+                             onChange={(e) => setNewCourseDirector(e.target.value)}
+                         />
                     </div>
+                    
                     <div style={{ marginBottom: '1.5rem' }}>
-                        <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.9rem', fontWeight: 500 }}>Jornada</label>
-                        <select 
-                            className="input-field"
-                            value={newCourseJornada}
-                            onChange={(e) => setNewCourseJornada(e.target.value)}
-                        >
-                            <option value="JM">JM (Mañana)</option>
-                            <option value="JT">JT (Tarde)</option>
-                        </select>
-                        <p style={{ fontSize: '0.8rem', color: 'var(--color-text-secondary)', marginTop: '0.5rem' }}>
-                            Result: {newCourseGrade}-{newCourseJornada}
-                        </p>
+                         <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.9rem', fontWeight: 500 }}>Schedule / Horario</label>
+                         <input 
+                             className="input-field"
+                             placeholder="e.g. Lunes 2da y 3ra hora"
+                             value={newCourseSchedule}
+                             onChange={(e) => setNewCourseSchedule(e.target.value)}
+                         />
                     </div>
+                    
+                    <div style={{ marginBottom: '1rem', fontSize: '0.85rem', color: 'var(--color-text-secondary)', background: '#f5f5f7', padding: '0.5rem', borderRadius: '4px' }}>
+                        Creating: {newCourseGrade ? `${newCourseGrade}-${newCourseJornada}` : '...'}
+                    </div>
+
                     <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end' }}>
                         <button 
                             type="button" 

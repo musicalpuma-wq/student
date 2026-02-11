@@ -1,12 +1,18 @@
+import { useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import { LayoutDashboard, Users, FileSpreadsheet, Settings, Download } from 'lucide-react';
+import { SettingsModal } from './SettingsModal';
+import { useSettings } from '../context/SettingsContext';
 
 export function Sidebar() {
+  const [showSettings, setShowSettings] = useState(false);
+  // Use context safely (might be null if Sidebar rendered outside provider during dev, but App wraps it)
+  // Let's assume it's wrapped.
+  
   const navItems = [
     { icon: LayoutDashboard, label: 'Dashboard', path: '/' },
     { icon: Users, label: 'Register Student', path: '/register' },
     // { icon: FileSpreadsheet, label: 'Reports', path: '/reports' },
-    // { icon: Settings, label: 'Settings', path: '/settings' },
   ];
 
   const handleBackup = () => {
@@ -46,13 +52,14 @@ export function Sidebar() {
   };
 
   return (
+    <>
     <aside style={{
       width: '260px',
       height: '100vh',
       position: 'fixed',
       left: 0,
       top: 0,
-      background: 'rgba(255, 255, 255, 0.8)',
+      background: 'var(--color-bg-card)', // Changed to card bg for better theme support
       backdropFilter: 'blur(20px)',
       borderRight: '1px solid var(--color-border)',
       padding: '2rem 1.5rem',
@@ -87,6 +94,31 @@ export function Sidebar() {
             {item.label}
           </NavLink>
         ))}
+        
+        <button 
+             onClick={() => setShowSettings(true)}
+             style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.75rem',
+                  padding: '0.8rem 1rem',
+                  borderRadius: 'var(--radius-md)',
+                  color: 'var(--color-text-secondary)',
+                  background: 'transparent',
+                  textDecoration: 'none',
+                  fontWeight: 500,
+                  border: 'none',
+                  cursor: 'pointer',
+                  width: '100%',
+                  textAlign: 'left',
+                  fontFamily: 'inherit',
+                  fontSize: 'inherit'
+                }}
+        >
+            <Settings size={20} />
+            Settings
+        </button>
+
         <button
             onClick={handleBackup}
             style={{
@@ -130,7 +162,7 @@ export function Sidebar() {
               marginTop: '0.2rem'
             }}
         >
-            <Settings size={20} />
+            <Download size={20} />
             Restore Data
             <input 
                 type="file" 
@@ -162,11 +194,33 @@ export function Sidebar() {
             Downloads
         </NavLink>
         
-        <div style={{ padding: '1rem', background: '#f5f5f7', borderRadius: 'var(--radius-md)' }}>
-          <p style={{ fontSize: '0.8rem', color: '#86868b', fontWeight: 600 }}>Teacher</p>
-          <p style={{ fontSize: '0.9rem', fontWeight: 500 }}>Mauricio Herrera</p>
+        <div style={{ padding: '1rem', background: 'var(--color-bg-body)', borderRadius: 'var(--radius-md)' }}>
+            <TeacherInfo />
         </div>
       </div>
     </aside>
+    {showSettings && <SettingsModal onClose={() => setShowSettings(false)} />}
+    </>
   );
+}
+
+// Small component to consume context safely
+function TeacherInfo() {
+    // If context not valid (e.g. login screen or test), fallback
+    try {
+        const { settings } = useSettings();
+        return (
+            <>
+              <p style={{ fontSize: '0.8rem', color: 'var(--color-text-secondary)', fontWeight: 600 }}>{settings.subject || 'Teacher'}</p>
+              <p style={{ fontSize: '0.9rem', fontWeight: 500 }}>{settings.teacherName || 'User'}</p>
+            </>
+        );
+    } catch (e) {
+        return (
+            <>
+              <p style={{ fontSize: '0.8rem', color: 'var(--color-text-secondary)', fontWeight: 600 }}>Teacher</p>
+              <p style={{ fontSize: '0.9rem', fontWeight: 500 }}>Mauricio Herrera</p>
+            </>
+        );
+    }
 }

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { DataStore } from '../services/DataStore';
 import { Plus, Calendar, FileText, UserSquare2, ChevronLeft, Save, ArrowUpDown, Mail, GripVertical, Edit2, ArrowRight, Trash2, AlertTriangle, KeyRound, Lock, Unlock } from 'lucide-react';
+import { GenericModal } from '../components/GenericModal';
 
 export function CourseGradebook() {
   const { courseId } = useParams();
@@ -21,7 +22,7 @@ export function CourseGradebook() {
   const [isEditingCourseName, setIsEditingCourseName] = useState(false);
   const [newCourseName, setNewCourseName] = useState('');
   const [editingActivity, setEditingActivity] = useState(null);
-  const [showLowGradesOnly, setShowLowGradesOnly] = useState(false);
+
 
   
   // Delete Course State
@@ -36,6 +37,10 @@ export function CourseGradebook() {
   const [securityCodeInput, setSecurityCodeInput] = useState('');
   const [onSecuritySuccess, setOnSecuritySuccess] = useState(null); // Function to call on success
   const [securityActionName, setSecurityActionName] = useState('');
+  const [modalConfig, setModalConfig] = useState({ isOpen: false, type: 'alert', title: '', message: '', onConfirm: () => {} });
+
+  const showModal = (config) => setModalConfig({ ...config, isOpen: true });
+  const closeModal = () => setModalConfig({ ...modalConfig, isOpen: false });
 
   const navigate = useNavigate();
 
@@ -158,25 +163,6 @@ export function CourseGradebook() {
   const getSortedStudents = () => {
     let filtered = [...students];
 
-    if (showLowGradesOnly) {
-        filtered = filtered.filter(s => {
-            // Check if any grade is <= 1.0 or missing (undefined/empty)
-            // User: "Filtro de estudiantes con 1,0 o sin nota"
-            // If activities exist, check against them.
-            if (activities.length === 0) return true; // Show all if no activities? Or none? Assume show all if suspicious.
-            
-            return activities.some(act => {
-                const g = (s.grades || {})[act.id];
-                const val = parseFloat(g);
-                // Missing or Empty
-                if (g === undefined || g === null || g === '') return true;
-                // <= 1.0
-                if (!isNaN(val) && val <= 1.0) return true;
-                return false;
-            });
-        });
-    }
-
     filtered.sort((a, b) => {
       let valA, valB;
 
@@ -209,11 +195,19 @@ export function CourseGradebook() {
 
   // --- Grades Logic ---
   const handleAddActivity = () => {
-    const name = prompt("Enter Activity Name/Description:");
-    if (name) {
-      DataStore.addActivity(courseId, name);
-      refreshData();
-    }
+    showModal({
+        type: 'prompt',
+        title: 'New Activity',
+        inputPlaceholder: 'Enter Activity Name',
+        onConfirm: (name) => {
+            if (name) {
+                DataStore.addActivity(courseId, name);
+                refreshData();
+                closeModal();
+            }
+        },
+        onCancel: closeModal
+    });
   };
 
   const handleUpdateActivity = (e) => {
@@ -305,49 +299,80 @@ export function CourseGradebook() {
       // Better: Use a confirm or prompt. 
       const availableCourses = DataStore.getCourses().filter(c => c !== courseId);
       if (availableCourses.length === 0) {
-          alert("No other courses available to move to.");
+          showModal({
+              type: 'alert',
+              title: 'No Available Courses',
+              message: "There are no other courses to move the student to.",
+              onConfirm: closeModal,
+              onCancel: closeModal
+          });
           return;
       }
       
-      const targetCourse = prompt(`Move ${student.name} to which course?\nAvailable: ${availableCourses.join(', ')}`);
-      
-      if (targetCourse && availableCourses.includes(targetCourse)) {
-          requestSecurityCheck(`move ${student.name} to ${targetCourse}`, () => {
-              const newJornada = targetCourse.includes('JT') ? 'Tarde' : 'Mañana';
-              const updatedStudent = { ...student, course: targetCourse, jornada: newJornada };
-              DataStore.updateStudent(updatedStudent);
-              setStudents(prev => prev.filter(s => s.id !== student.id));
-              if (viewingStudent && viewingStudent.id === student.id) {
-                  setViewingStudent(null);
+          
+      showModal({
+          type: 'prompt',
+          title: 'Move Student',
+          message: `Available courses: ${availableCourses.join(', ')}`,
+          inputPlaceholder: 'Target Course Name',
+          onConfirm: (targetCourse) => {
+              if (targetCourse && availableCourses.includes(targetCourse)) {
+                  closeModal();
+                  requestSecurityCheck(`move ${student.name} to ${targetCourse}`, () => {
+                      const newJornada = targetCourse.includes('JT') ? 'Tarde' : 'Mañana';
+                      const updatedStudent = { ...student, course: targetCourse, jornada: newJornada };
+                      DataStore.updateStudent(updatedStudent);
+                      setStudents(prev => prev.filter(s => s.id !== student.id));
+                      if (viewingStudent && viewingStudent.id === student.id) {
+                          setViewingStudent(null);
+                      }
+                  });
+              } else if (targetCourse) {
+                   closeModal();
+                   // confirm creation
+                   setTimeout(() => { // delay for modal transition
+                       showModal({
+                           type: 'confirm',
+                           title: 'Course Not Found',
+                           message: `Course '${targetCourse}' does not exist. Create it and move student?`,
+                           onConfirm: () => {
+                                closeModal();
+                                requestSecurityCheck(`create course ${targetCourse} and move ${student.name}`, () => {
+                                    const newJornada = targetCourse.includes('JT') ? 'Tarde' : 'Mañana';
+                                    const updatedStudent = { ...student, course: targetCourse, jornada: newJornada };
+                                    DataStore.updateStudent(updatedStudent);
+                                    DataStore.addCourse(targetCourse); 
+                                    setStudents(prev => prev.filter(s => s.id !== student.id));
+                                    if (viewingStudent && viewingStudent.id === student.id) {
+                                        setViewingStudent(null);
+                                    }
+                                });
+                           },
+                           onCancel: closeModal
+                       });
+                   }, 300);
               }
-              // Note: We don't remove grades, so they transfer.
-          });
-      } else if (targetCourse) {
-           // Maybe user typed a new course name?
-           // If we allow moving to a new course that doesn't exist yet:
-            if (confirm(`Course '${targetCourse}' does not exist. Create it and move student?`)) {
-                 requestSecurityCheck(`create course ${targetCourse} and move ${student.name}`, () => {
-                    const newJornada = targetCourse.includes('JT') ? 'Tarde' : 'Mañana';
-                    const updatedStudent = { ...student, course: targetCourse, jornada: newJornada };
-                    DataStore.updateStudent(updatedStudent);
-                    DataStore.addCourse(targetCourse); // Ensure course is added to list
-                    setStudents(prev => prev.filter(s => s.id !== student.id));
-                    if (viewingStudent && viewingStudent.id === student.id) {
-                        setViewingStudent(null);
-                    }
-                 });
-            }
-      }
+          },
+          onCancel: closeModal
+      });
   };
 
 
   // --- Materials Logic ---
   const handleAddMaterial = () => {
-    const name = prompt("Enter Material/Column Name (e.g. Guitarra):");
-    if (name) {
-      DataStore.addMaterialColumn(courseId, name);
-      refreshData();
-    }
+    showModal({
+        type: 'prompt',
+        title: 'New Material Column',
+        inputPlaceholder: 'Enter Material Name (e.g. Guitarra)',
+        onConfirm: (name) => {
+            if (name) {
+                DataStore.addMaterialColumn(courseId, name);
+                refreshData();
+                closeModal();
+            }
+        },
+        onCancel: closeModal
+    });
   };
 
   const handleMaterialValueChange = (student, materialId, value) => {
@@ -413,10 +438,15 @@ export function CourseGradebook() {
   // --- Observer Logic ---
   const handleSendToParent = (student, note) => {
       if (!student.parentEmail) {
-          alert('No parent email registered for this student.');
+          showModal({
+              type: 'alert',
+              title: 'No Email Found',
+              message: 'No parent email registered for this student. Observation copied to clipboard.',
+              onConfirm: closeModal,
+              onCancel: closeModal
+          });
           const text = `Student: ${student.name}\nObservation: ${note}`;
           navigator.clipboard.writeText(text);
-          alert('Observation copied to clipboard instead.');
           return;
       }
       
@@ -476,10 +506,17 @@ export function CourseGradebook() {
           });
       } else {
           // Lock -> Immediate
-          if (confirm(`Are you sure you want to lock "${activity.name}"? Grades will become read-only until unlocked with the security code.`)) {
-               DataStore.updateActivity(courseId, { ...activity, locked: true });
-               refreshData();
-          }
+          showModal({
+              type: 'confirm',
+              title: 'Lock Activity?',
+              message: `Are you sure you want to lock "${activity.name}"? Grades will become read-only.`,
+              onConfirm: () => {
+                   DataStore.updateActivity(courseId, { ...activity, locked: true });
+                   refreshData();
+                   closeModal();
+              },
+              onCancel: closeModal
+          });
       }
   };
 
@@ -677,28 +714,6 @@ export function CourseGradebook() {
             Materials Assignment
         </button>
         
-        {/* Filter Toggle (Only visible in Grades tab) */}
-        {activeTab === 'grades' && (
-            <label style={{ 
-                marginLeft: 'auto', 
-                display: 'flex', 
-                alignItems: 'center', 
-                gap: '8px', 
-                cursor: 'pointer',
-                fontSize: '0.9rem',
-                color: showLowGradesOnly ? 'var(--color-danger)' : 'var(--color-text-secondary)',
-                fontWeight: 500
-            }}>
-                <input 
-                    type="checkbox" 
-                    checked={showLowGradesOnly} 
-                    onChange={(e) => setShowLowGradesOnly(e.target.checked)}
-                    style={{ accentColor: 'var(--color-danger)' }}
-                />
-                <AlertTriangle size={16} />
-                Show Alert Cases (≤1.0 or Missing)
-            </label>
-        )}
       </div>
 
       <div className="card" style={{ overflowX: 'auto', position: 'relative' }}>
@@ -1008,11 +1023,21 @@ export function CourseGradebook() {
                                                 key={date} 
                                                 style={{ textAlign: 'center', cursor: 'pointer' }}
                                                 onClick={() => {
-                                                    const next = { 'present': 'absent', 'absent': 'late', 'late': 'present' }[status] || 'present';
-                                                    const updated = { 
-                                                        ...student, 
-                                                        attendance: { ...student.attendance, [date]: next } 
-                                                    };
+                                                    // Logic: null/undefined -> 'present' -> 'absent' -> 'late' -> null
+                                                    let next = 'present';
+                                                    if (status === 'present') next = 'absent';
+                                                    else if (status === 'absent') next = 'late';
+                                                    else if (status === 'late') next = null; // Back to initial/null
+                                                    
+                                                    const updated = { ...student };
+                                                    if (!updated.attendance) updated.attendance = {};
+                                                    
+                                                    if (next) {
+                                                        updated.attendance[date] = next;
+                                                    } else {
+                                                        delete updated.attendance[date];
+                                                    }
+                                                    
                                                     DataStore.updateStudent(updated);
                                                     setStudents(prev => prev.map(s => s.id === student.id ? updated : s));
                                                 }}
@@ -1021,9 +1046,10 @@ export function CourseGradebook() {
                                                     width: '12px', 
                                                     height: '12px', 
                                                     borderRadius: '50%', 
-                                                    background: dotColor,
+                                                    background: !status ? 'white' : dotColor,
+                                                    border: !status ? '1px solid #ccc' : 'none',
                                                     margin: '0 auto'
-                                                }} title={status} />
+                                                }} title={status || 'Not Taken'} />
                                             </td>
                                         );
                                     })}
@@ -1773,6 +1799,17 @@ export function CourseGradebook() {
             </div>
         </div>
       )}
+      
+      <GenericModal 
+          isOpen={modalConfig.isOpen}
+          type={modalConfig.type}
+          title={modalConfig.title}
+          message={modalConfig.message}
+          onConfirm={modalConfig.onConfirm}
+          onCancel={modalConfig.onCancel}
+          inputPlaceholder={modalConfig.inputPlaceholder}
+          defaultValue={modalConfig.defaultValue}
+      />
     </div>
   );
 }

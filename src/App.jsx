@@ -6,6 +6,7 @@ import { StudentRegistration } from './pages/StudentRegistration';
 import { CourseGradebook } from './pages/CourseGradebook';
 import { Downloads } from './pages/Downloads';
 import { Login } from './pages/Login';
+import { SettingsProvider } from './context/SettingsContext';
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -24,16 +25,18 @@ function App() {
   }
 
   return (
-    <BrowserRouter>
-      <Routes>
-        <Route path="/" element={<Layout />}>
-          <Route index element={<Dashboard />} />
-          <Route path="register" element={<StudentRegistration />} />
-          <Route path="course/:courseId" element={<CourseGradebook />} />
-          <Route path="downloads" element={<Downloads />} />
-        </Route>
-      </Routes>
-    </BrowserRouter>
+    <SettingsProvider>
+      <BrowserRouter>
+        <Routes>
+          <Route path="/" element={<Layout />}>
+            <Route index element={<Dashboard />} />
+            <Route path="register" element={<StudentRegistration />} />
+            <Route path="course/:courseId" element={<CourseGradebook />} />
+            <Route path="downloads" element={<Downloads />} />
+          </Route>
+        </Routes>
+      </BrowserRouter>
+    </SettingsProvider>
   )
 }
 
