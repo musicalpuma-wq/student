@@ -360,7 +360,7 @@ export function Dashboard() {
                                   width: '42px',
                                   height: '42px',
                                   borderRadius: '50%',
-                                  background: 'white',
+                                  background: 'var(--color-bg-card)',
                                   display: 'flex',
                                   alignItems: 'center',
                                   justifyContent: 'center',
@@ -374,7 +374,7 @@ export function Dashboard() {
                       </div>
                   </div>
                   
-                  <div style={{ marginTop: '1.5rem', background: '#f9f9f9', padding: '0.8rem', borderRadius: '8px' }}>
+                  <div style={{ marginTop: '1.5rem', background: 'var(--color-bg-secondary)', padding: '0.8rem', borderRadius: '8px' }}>
                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.9rem' }}>
                            <span style={{ color: failing > 0 ? 'var(--color-danger)' : 'var(--color-text-secondary)' }}>
                                At Risk (Avg &lt; 3.0)

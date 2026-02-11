@@ -747,13 +747,24 @@ export function CourseGradebook() {
                         {activities.map(act => (
                             <th 
                                 key={act.id} 
-                                style={{ minWidth: '100px', textAlign: 'center', cursor: 'pointer', transition: 'background 0.2s', background: act.locked ? '#fdfdfd' : 'transparent' }}
+                                style={{ 
+                                    minWidth: '150px', 
+                                    maxWidth: '200px', 
+                                    textAlign: 'left', 
+                                    cursor: 'pointer', 
+                                    transition: 'background 0.2s', 
+                                    background: act.locked ? 'var(--color-bg-secondary)' : 'transparent',
+                                    paddingLeft: '1rem',
+                                    whiteSpace: 'nowrap',
+                                    overflow: 'hidden',
+                                    textOverflow: 'ellipsis'
+                                }}
                                 className="hover-bg-gray"
                             >
-                                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', height: '100%', justifyContent: 'space-between' }}>
+                                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '4px', height: '100%', justifyContent: 'space-between' }}>
                                     
-                                    {/* Lock Icon - Centered */}
-                                    <div style={{ display: 'flex', justifyContent: 'center', width: '100%', marginBottom: '2px' }}>
+                                    {/* Lock Icon - Left Aligned */}
+                                    <div style={{ display: 'flex', justifyContent: 'flex-start', width: '100%', marginBottom: '2px' }}>
                                          <button 
                                             onClick={(e) => { e.stopPropagation(); handleToggleLockActivity(act); }}
                                             style={{ 
@@ -855,8 +866,8 @@ export function CourseGradebook() {
                                 }
 
                                 return (
-                                <td key={act.id} style={{ textAlign: 'center', padding: '0.5rem' }}>
-                                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
+                                <td key={act.id} style={{ textAlign: 'left', padding: '0.5rem', paddingLeft: '1rem' }}>
+                                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '4px' }}>
                                         {/* Progress Bar */}
                                         <div style={{ 
                                             width: '60px', 
@@ -883,7 +894,8 @@ export function CourseGradebook() {
                                             style={{ 
                                                 width: '60px', 
                                                 padding: '4px', 
-                                                textAlign: 'center', 
+                                                textAlign: 'left', 
+                                                paddingLeft: '8px', 
                                                 border: '1px solid #d2d2d7', 
                                                 borderRadius: '6px',
                                                 fontSize: '0.95rem',
