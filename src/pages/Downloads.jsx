@@ -16,8 +16,6 @@ export function Downloads() {
       jornada: true,
       parentName: true,
       parentPhone: true,
-      parentName: true,
-      parentPhone: true,
       parentEmail: true,
       generalObservations: false
   });
