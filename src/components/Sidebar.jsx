@@ -5,13 +5,12 @@ import { SettingsModal } from './SettingsModal';
 import { useSettings } from '../context/SettingsContext';
 
 export function Sidebar() {
+  const { settings, t } = useSettings();
   const [showSettings, setShowSettings] = useState(false);
-  // Use context safely (might be null if Sidebar rendered outside provider during dev, but App wraps it)
-  // Let's assume it's wrapped.
   
   const navItems = [
-    { icon: LayoutDashboard, label: 'Dashboard', path: '/' },
-    { icon: Users, label: 'Register Student', path: '/register' },
+    { icon: LayoutDashboard, label: t('dashboard'), path: '/' },
+    { icon: Users, label: t('students'), path: '/register' },
     // { icon: FileSpreadsheet, label: 'Reports', path: '/reports' },
   ];
 
@@ -116,7 +115,7 @@ export function Sidebar() {
                 }}
         >
             <Settings size={20} />
-            Settings
+            {t('settings')}
         </button>
 
         <button
@@ -140,7 +139,7 @@ export function Sidebar() {
             }}
         >
             <FileSpreadsheet size={20} />
-            Backup/Export
+            {t('backupRestore')}
         </button>
         
         <label 
@@ -163,12 +162,15 @@ export function Sidebar() {
             }}
         >
             <Download size={20} />
-            Restore Data
+            {t('restoreBackup')}
             <input 
                 type="file" 
                 accept=".json" 
                 style={{ display: 'none' }} 
                 onChange={handleImport}
+                onClick={(e) => {
+                    if(!window.confirm(t('restoreConfirm'))) e.preventDefault();
+                }}
             />
         </label>
       </nav>
@@ -191,7 +193,7 @@ export function Sidebar() {
             })}
         >
             <Download size={20} />
-            Downloads
+            {t('downloads')}
         </NavLink>
         
         <div style={{ padding: '1rem', background: 'var(--color-bg-body)', borderRadius: 'var(--radius-md)' }}>

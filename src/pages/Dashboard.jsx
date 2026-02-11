@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react';
 import { DataStore } from '../services/DataStore';
 import { Link, useNavigate } from 'react-router-dom';
-import { Users, ChevronRight, GraduationCap, Plus, BookOpen, Clock, User } from 'lucide-react';
+import { Plus, BookOpen, Clock, User, UserSquare2, FileText } from 'lucide-react';
+import { useSettings } from '../context/SettingsContext';
 
 export function Dashboard() {
   const navigate = useNavigate();
+  const { settings, t } = useSettings();
   const [courses, setCourses] = useState([]);
   const [stats, setStats] = useState({ totalStudents: 0, totalCourses: 0 });
   const [searchQuery, setSearchQuery] = useState('');
@@ -102,9 +104,9 @@ export function Dashboard() {
     <div>
       <header style={{ marginBottom: '2.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', flexWrap: 'wrap', gap: '1rem' }}>
         <div>
-            <h1 style={{ fontSize: '2.5rem', letterSpacing: '-0.5px' }}>Dashboard</h1>
+            <h1 style={{ fontSize: '2.5rem', letterSpacing: '-0.5px' }}>{t('welcome')}, {settings.teacherName}</h1>
             <p style={{ color: 'var(--color-text-secondary)', fontSize: '1.1rem' }}>
-            Welcome back. Here is an overview of your classes.
+            {settings.subject}
             </p>
         </div>
         
@@ -189,83 +191,83 @@ export function Dashboard() {
         marginBottom: '3rem'
       }}>
         <div className="card" style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-          <div style={{ padding: '0.8rem', background: 'rgba(52, 199, 89, 0.1)', color: 'var(--color-success)', borderRadius: '50%' }}>
-            <Users size={24} />
+          <div style={{ padding: '0.8rem', background: 'var(--color-bg-secondary)', color: 'var(--color-success)', borderRadius: '50%' }}>
+            <UserSquare2 size={24} />
           </div>
           <div>
-            <p style={{ fontSize: '0.9rem', color: 'var(--color-text-secondary)' }}>Total Students</p>
+            <p style={{ fontSize: '0.9rem', color: 'var(--color-text-secondary)' }}>{t('totalStudents')}</p>
             <p style={{ fontSize: '1.8rem', fontWeight: 700 }}>{stats.totalStudents}</p>
           </div>
         </div>
         
         <div className="card" style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-          <div style={{ padding: '0.8rem', background: 'rgba(0, 113, 227, 0.1)', color: 'var(--color-accent)', borderRadius: '50%' }}>
-            <GraduationCap size={24} />
+          <div style={{ padding: '0.8rem', background: 'var(--color-bg-secondary)', color: 'var(--color-accent)', borderRadius: '50%' }}>
+            <FileText size={24} />
           </div>
           <div>
-            <p style={{ fontSize: '0.9rem', color: 'var(--color-text-secondary)' }}>Active Courses</p>
+            <p style={{ fontSize: '0.9rem', color: 'var(--color-text-secondary)' }}>{t('totalCourses')}</p>
             <p style={{ fontSize: '1.8rem', fontWeight: 700 }}>{stats.totalCourses}</p>
           </div>
         </div>
       </div>
       
-      {/* Performance Chart */}
+      {/* Performance Chart */ }
       {courses.length > 0 && (
-        <div className="card" style={{ marginBottom: '3rem', padding: '2rem' }}>
-            <h3 style={{ fontSize: '1.2rem', marginBottom: '1.5rem', color: 'var(--color-text-primary)' }}>Course Performance Overview</h3>
-            <div style={{ 
-                display: 'flex', 
-                alignItems: 'flex-end', 
-                gap: '2rem', 
-                height: '250px', 
-                overflowX: 'auto',
-                paddingBottom: '1rem'
-            }}>
-                {courses.map(course => {
-                    const stats = calculateCourseStats(course);
-                    const avg = parseFloat(stats.avg);
-                    const heightPercent = Math.min((avg / 5) * 100, 100);
-                    
-                    // Gradient Logic
-                    // User: "si el rendimiento está por debajo de 3,0 la barra debe pasar a ser roja, y por encima de 3,0 debe pasar a ser verde, mejor si se hace en degradado de rojo a verde."
-                    const isFailing = avg < 3.0;
-                    
-                    // Let's use a dynamic color based on value.
-                    // A simple conditional static color or gradient is safer.
-                    const finalBg = avg < 3.0 
-                        ? 'linear-gradient(180deg, #FF453A 0%, #FF9F0A 100%)' 
-                        : 'linear-gradient(180deg, #32D74B 0%, #30D158 100%)';
+          <div className="card" style={{ marginBottom: '3rem', padding: '2rem' }}>
+              <h3 style={{ fontSize: '1.2rem', marginBottom: '1.5rem', color: 'var(--color-text-primary)' }}>{t('coursePerformance')}</h3>
+              <div style={{ 
+                  display: 'flex', 
+                  alignItems: 'flex-end', 
+                  gap: '2rem', 
+                  height: '250px', 
+                  overflowX: 'auto',
+                  paddingBottom: '1rem',
+                  borderBottom: '1px solid var(--color-border)'
+              }}>
+                  {courses.map(course => {
+                      const stats = calculateCourseStats(course);
+                      const avg = parseFloat(stats.avg);
+                      // Scale: 1.0 to 5.0
+                      // y = (val - 1) / (5 - 1) * 100
+                      const heightPercent = Math.max(0, Math.min(((avg - 1) / 4) * 100, 100)); // Normalize 1-5 to 0-100%
+                      
+                      const finalBg = avg < 3.0 
+                          ? 'var(--color-danger)' 
+                          : 'var(--color-success)';
 
-                    return (
-                        <div key={course} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem', minWidth: '40px' }}>
-                             <div style={{ 
-                                 fontWeight: 700, 
-                                 fontSize: '0.8rem', 
-                                 color: avg < 3.0 ? 'var(--color-danger)' : 'var(--color-success)'
-                             }}>
-                                 {stats.avg}
-                             </div>
-                             <div 
-                                style={{ 
-                                    width: '30px', 
-                                    height: `${heightPercent}%`, 
-                                    background: finalBg,
-                                    borderRadius: '6px 6px 0 0',
-                                    transition: 'height 0.5s ease',
-                                    opacity: 0.9
-                                }} 
-                                title={`${course}: ${stats.avg}`}
-                             />
-                             <div style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)', fontSize: '0.85rem', fontWeight: 500, color: 'var(--color-text-secondary)', marginTop: '0.5rem' }}>
-                                 {course}
-                             </div>
-                        </div>
-                    );
-                })}
-            </div>
-            {/* Axis/Legend line */}
-            <div style={{ width: '100%', height: '1px', background: 'var(--color-border)', marginTop: '-1rem', position: 'relative', zIndex: -1 }} />
-        </div>
+                      return (
+                          <div key={course} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem', minWidth: '40px', height: '100%', justifyContent: 'flex-end' }}>
+                               <div style={{ 
+                                   fontWeight: 700, 
+                                   fontSize: '0.8rem', 
+                                   color: finalBg
+                               }}>
+                                   {stats.avg}
+                               </div>
+                               <div 
+                                  style={{ 
+                                      width: '30px', 
+                                      height: `${heightPercent}%`, 
+                                      background: finalBg,
+                                      borderRadius: '4px 4px 0 0',
+                                      transition: 'height 0.5s ease',
+                                      opacity: 0.9,
+                                      minHeight: '4px' // Visibility for 1.0
+                                  }} 
+                                  title={`${course}: ${stats.avg}`}
+                               />
+                               <div style={{ fontSize: '0.85rem', fontWeight: 500, color: 'var(--color-text-secondary)', marginTop: '0.5rem' }}>
+                                   {course}
+                               </div>
+                          </div>
+                      );
+                  })}
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', color: 'var(--color-text-secondary)', marginTop: '0.5rem' }}>
+                  <span>1.0</span>
+                  <span>5.0</span>
+              </div>
+          </div>
       )}
 
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>

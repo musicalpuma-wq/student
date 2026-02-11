@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import { useSettings } from '../context/SettingsContext';
-import { X, Moon, Sun, Monitor, Type, User, Book, Globe } from 'lucide-react';
+import { X, Moon, Sun, Monitor, Type, User, Book, Globe, Lock } from 'lucide-react';
 
 export function SettingsModal({ onClose }) {
-  const { settings, updateSettings, currentTheme } = useSettings();
+  const { settings, updateSettings, currentTheme, t } = useSettings();
   const [activeTab, setActiveTab] = useState('general'); // general, display, security
   
   // Local state for password change (simple version)
@@ -11,20 +11,26 @@ export function SettingsModal({ onClose }) {
 
   const handlePasswordChange = (e) => {
       e.preventDefault();
-      // In a real app, we would validate current password against backend/store
-      // For this local demo, assume '6251' is the old one if not dynamic
-      // User requested: "se pide la clave existente y se da la opción de cambiar a una nueva"
-      // Since Login.jsx checks '6251' hardcoded, we can't easily change it globally unless we move that logic to context or store.
-      // I will implement the UI and show a success alert, and maybe update a localStorage key for custom password if I had time to refactor Login.jsx.
-      // For now, let's just show a success message as a mock interaction or actually try to save it if I refactor Login.
       
-      if (passwordData.new !== passwordData.confirm) {
-          alert("New passwords do not match.");
+      const storedPassword = localStorage.getItem('app_password') || '6251';
+
+      if (passwordData.current !== storedPassword) {
+          alert(t('wrongCurrentPassword'));
           return;
       }
       
-      alert("Password change feature is ready to be connected to the auth system.");
-      // In a real implementation: save new hash to storage.
+      if (passwordData.new !== passwordData.confirm) {
+          alert(t('passwordMismatch'));
+          return;
+      }
+
+      if (passwordData.new.length < 4) {
+          alert("Password must be at least 4 characters");
+          return;
+      }
+      
+      localStorage.setItem('app_password', passwordData.new);
+      alert(t('passwordUpdated'));
       setPasswordData({ current: '', new: '', confirm: '' });
   };
 
@@ -34,11 +40,11 @@ export function SettingsModal({ onClose }) {
       background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2000,
       backdropFilter: 'blur(5px)'
     }} onClick={onClose}>
-      <div className="card" style={{ width: '500px', maxHeight: '90vh', overflowY: 'auto', padding: 0 }} onClick={e => e.stopPropagation()}>
+      <div className="card" style={{ width: '600px', maxHeight: '90vh', overflowY: 'auto', padding: 0 }} onClick={e => e.stopPropagation()}>
         
         {/* Header */}
         <div style={{ padding: '1.5rem', borderBottom: '1px solid var(--color-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <h2 style={{ fontSize: '1.5rem', margin: 0 }}>Settings</h2>
+            <h2 style={{ fontSize: '1.5rem', margin: 0 }}>{t('settingsTitle')}</h2>
             <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-text-secondary)' }}>
                 <X size={24} />
             </button>
@@ -46,7 +52,7 @@ export function SettingsModal({ onClose }) {
         
         <div style={{ display: 'flex', minHeight: '400px' }}>
             {/* Sidebar Tabs */}
-            <div style={{ width: '150px', background: 'var(--color-bg-body)', padding: '1rem 0' }}>
+            <div style={{ width: '180px', background: 'var(--color-bg-secondary)', padding: '1rem 0' }}>
                 <button 
                     onClick={() => setActiveTab('general')}
                     style={{ 
@@ -56,7 +62,7 @@ export function SettingsModal({ onClose }) {
                         fontWeight: 500, cursor: 'pointer', textAlign: 'left'
                     }}
                 >
-                    <User size={18} /> General
+                    <User size={18} /> {t('general')}
                 </button>
                 <button 
                     onClick={() => setActiveTab('display')}
@@ -67,17 +73,28 @@ export function SettingsModal({ onClose }) {
                         fontWeight: 500, cursor: 'pointer', textAlign: 'left'
                     }}
                 >
-                    <Monitor size={18} /> Display
+                    <Monitor size={18} /> {t('display')}
+                </button>
+                 <button 
+                    onClick={() => setActiveTab('security')}
+                    style={{ 
+                        display: 'flex', alignItems: 'center', gap: '8px',
+                        width: '100%', padding: '0.8rem 1rem', border: 'none', background: activeTab === 'security' ? 'var(--color-bg-card)' : 'transparent',
+                        color: activeTab === 'security' ? 'var(--color-accent)' : 'var(--color-text-secondary)',
+                        fontWeight: 500, cursor: 'pointer', textAlign: 'left'
+                    }}
+                >
+                    <Lock size={18} /> {t('security')}
                 </button>
             </div>
             
             {/* Content */}
-            <div style={{ flex: 1, padding: '2rem' }}>
+            <div style={{ flex: 1, padding: '2rem', background: 'var(--color-bg-primary)' }}>
                 
                 {activeTab === 'general' && (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
                         <div>
-                            <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 500 }}>Name</label>
+                            <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 500 }}>{t('teacherName')}</label>
                             <input 
                                 className="input-field" 
                                 value={settings.teacherName} 
@@ -85,7 +102,7 @@ export function SettingsModal({ onClose }) {
                             />
                         </div>
                         <div>
-                            <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 500 }}>Subject</label>
+                            <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 500 }}>{t('subject')}</label>
                             <input 
                                 className="input-field" 
                                 value={settings.subject} 
@@ -93,9 +110,9 @@ export function SettingsModal({ onClose }) {
                             />
                         </div>
                         <div>
-                            <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 500 }}>Language</label>
-                            <div style={{ display: 'flex', gap: '1rem' }}>
-                                <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}>
+                            <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 500 }}>{t('language')}</label>
+                            <div style={{ display: 'flex', gap: '1.5rem' }}>
+                                <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
                                     <input 
                                         type="radio" 
                                         name="lang" 
@@ -104,7 +121,7 @@ export function SettingsModal({ onClose }) {
                                     />
                                     English
                                 </label>
-                                <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}>
+                                <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
                                     <input 
                                         type="radio" 
                                         name="lang" 
@@ -115,58 +132,42 @@ export function SettingsModal({ onClose }) {
                                 </label>
                             </div>
                         </div>
-                        
-                        <div style={{ marginTop: '1rem', borderTop: '1px solid var(--color-border)', paddingTop: '1.5rem' }}>
-                            <h3 style={{ fontSize: '1.1rem', marginBottom: '1rem' }}>Change Password</h3>
-                            <form onSubmit={handlePasswordChange}>
-                                <input 
-                                    type="password" className="input-field" placeholder="Current Password" 
-                                    style={{ marginBottom: '0.5rem' }} value={passwordData.current} onChange={e => setPasswordData({...passwordData, current: e.target.value})}
-                                />
-                                <input 
-                                    type="password" className="input-field" placeholder="New Password" 
-                                    style={{ marginBottom: '0.5rem' }} value={passwordData.new} onChange={e => setPasswordData({...passwordData, new: e.target.value})}
-                                />
-                                <input 
-                                    type="password" className="input-field" placeholder="Confirm New Password" 
-                                    style={{ marginBottom: '1rem' }} value={passwordData.confirm} onChange={e => setPasswordData({...passwordData, confirm: e.target.value})}
-                                />
-                                <button type="submit" className="btn btn-secondary" style={{ width: '100%' }}>Update Password</button>
-                            </form>
-                        </div>
                     </div>
                 )}
                 
                 {activeTab === 'display' && (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
                         <div>
-                            <label style={{ display: 'block', marginBottom: '0.8rem', fontWeight: 500 }}>Theme Mode</label>
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.5rem' }}>
+                            <label style={{ display: 'block', marginBottom: '0.8rem', fontWeight: 500 }}>{t('theme')}</label>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1rem' }}>
                                 <button 
                                     className={`btn ${settings.themeMode === 'light' ? '' : 'btn-secondary'}`}
                                     onClick={() => updateSettings({ themeMode: 'light' })}
+                                    style={{ justifyContent: 'center' }}
                                 >
-                                    <Sun size={16} style={{ marginRight: '6px' }} /> Light
+                                    <Sun size={16} style={{ marginRight: '6px' }} /> {t('themeLight')}
                                 </button>
                                 <button 
                                     className={`btn ${settings.themeMode === 'dark' ? '' : 'btn-secondary'}`}
                                     onClick={() => updateSettings({ themeMode: 'dark' })}
+                                    style={{ justifyContent: 'center' }}
                                 >
-                                    <Moon size={16} style={{ marginRight: '6px' }} /> Dark
+                                    <Moon size={16} style={{ marginRight: '6px' }} /> {t('themeDark')}
                                 </button>
                                 <button 
                                     className={`btn ${settings.themeMode === 'auto' ? '' : 'btn-secondary'}`}
                                     onClick={() => updateSettings({ themeMode: 'auto' })}
                                     title="Auto: Dark from 6PM to 6AM"
+                                    style={{ justifyContent: 'center' }}
                                 >
-                                    <Monitor size={16} style={{ marginRight: '6px' }} /> Auto
+                                    <Monitor size={16} style={{ marginRight: '6px' }} /> {t('themeAuto')}
                                 </button>
                             </div>
                         </div>
                         
                         <div>
-                            <label style={{ display: 'block', marginBottom: '0.8rem', fontWeight: 500 }}>Font Size</label>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', background: 'var(--color-bg-body)', padding: '1rem', borderRadius: '8px' }}>
+                            <label style={{ display: 'block', marginBottom: '0.8rem', fontWeight: 500 }}>{t('fontSize')}</label>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', background: 'var(--color-bg-secondary)', padding: '1rem', borderRadius: '8px' }}>
                                 <Type size={14} />
                                 <input 
                                     type="range" min="0" max="2" step="1"
@@ -180,10 +181,40 @@ export function SettingsModal({ onClose }) {
                                 <Type size={24} />
                             </div>
                             <div style={{ textAlign: 'center', marginTop: '0.5rem', fontSize: '0.9rem', color: 'var(--color-text-secondary)' }}>
-                                {settings.fontSize.charAt(0).toUpperCase() + settings.fontSize.slice(1)}
+                                {t(`fs${settings.fontSize.charAt(0).toUpperCase() + settings.fontSize.slice(1)}`)}
                             </div>
                         </div>
                     </div>
+                )}
+
+                {activeTab === 'security' && (
+                     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                        <h3 style={{ fontSize: '1.1rem', marginBottom: '0.5rem' }}>{t('changePassword')}</h3>
+                        <form onSubmit={handlePasswordChange}>
+                            <div style={{ marginBottom: '1rem' }}>
+                                <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.9rem' }}>{t('currentPassword')}</label>
+                                <input 
+                                    type="password" className="input-field" 
+                                    value={passwordData.current} onChange={e => setPasswordData({...passwordData, current: e.target.value})}
+                                />
+                            </div>
+                            <div style={{ marginBottom: '1rem' }}>
+                                <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.9rem' }}>{t('newPassword')}</label>
+                                <input 
+                                    type="password" className="input-field" 
+                                    value={passwordData.new} onChange={e => setPasswordData({...passwordData, new: e.target.value})}
+                                />
+                            </div>
+                            <div style={{ marginBottom: '1.5rem' }}>
+                                <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.9rem' }}>{t('confirmPassword')}</label>
+                                <input 
+                                    type="password" className="input-field" 
+                                    value={passwordData.confirm} onChange={e => setPasswordData({...passwordData, confirm: e.target.value})}
+                                />
+                            </div>
+                            <button type="submit" className="btn" style={{ width: '100%' }}>{t('updatePassword')}</button>
+                        </form>
+                     </div>
                 )}
             </div>
         </div>

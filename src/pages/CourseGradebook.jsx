@@ -3,9 +3,11 @@ import { useParams, Link, useNavigate } from 'react-router-dom';
 import { DataStore } from '../services/DataStore';
 import { Plus, Calendar, FileText, UserSquare2, ChevronLeft, Save, ArrowUpDown, Mail, GripVertical, Edit2, ArrowRight, Trash2, AlertTriangle, KeyRound, Lock, Unlock } from 'lucide-react';
 import { GenericModal } from '../components/GenericModal';
+import { useSettings } from '../context/SettingsContext';
 
 export function CourseGradebook() {
   const { courseId } = useParams();
+  const { t } = useSettings();
   const [students, setStudents] = useState([]);
   const [activities, setActivities] = useState([]);
   const [materials, setMaterials] = useState([]); // [{id, name}]
@@ -197,8 +199,8 @@ export function CourseGradebook() {
   const handleAddActivity = () => {
     showModal({
         type: 'prompt',
-        title: 'New Activity',
-        inputPlaceholder: 'Enter Activity Name',
+        title: t('addActivity'),
+        inputPlaceholder: t('enterActivityName'),
         onConfirm: (name) => {
             if (name) {
                 DataStore.addActivity(courseId, name);
@@ -362,8 +364,8 @@ export function CourseGradebook() {
   const handleAddMaterial = () => {
     showModal({
         type: 'prompt',
-        title: 'New Material Column',
-        inputPlaceholder: 'Enter Material Name (e.g. Guitarra)',
+        title: t('addMaterial'),
+        inputPlaceholder: t('materialName'),
         onConfirm: (name) => {
             if (name) {
                 DataStore.addMaterialColumn(courseId, name);
@@ -572,7 +574,7 @@ export function CourseGradebook() {
                     </button>
                 </div>
             )}
-            <p style={{ color: 'var(--color-text-secondary)' }}>Course Management</p>
+            <p style={{ color: 'var(--color-text-secondary)' }}>{t('courseManagement')}</p>
         </div>
       </div>
       
@@ -583,7 +585,7 @@ export function CourseGradebook() {
           gap: '1rem', 
           marginBottom: '2rem',
           padding: '1rem',
-          background: '#f5f5f7',
+          background: 'var(--color-bg-secondary)',
           borderRadius: 'var(--radius-md)'
       }}>
           {(() => {
@@ -633,25 +635,25 @@ export function CourseGradebook() {
               return (
                   <>
                     <div style={{ textAlign: 'center' }}>
-                        <div style={{ fontSize: '0.8rem', color: '#86868b', fontWeight: 600, textTransform: 'uppercase' }}>Students</div>
+                        <div style={{ fontSize: '0.8rem', color: 'var(--color-text-secondary)', fontWeight: 600, textTransform: 'uppercase' }}>{t('students')}</div>
                         <div style={{ fontSize: '1.5rem', fontWeight: 700 }}>{totalStudents}</div>
                     </div>
                     <div style={{ textAlign: 'center' }}>
-                        <div style={{ fontSize: '0.8rem', color: '#86868b', fontWeight: 600, textTransform: 'uppercase' }}>Observations</div>
+                        <div style={{ fontSize: '0.8rem', color: 'var(--color-text-secondary)', fontWeight: 600, textTransform: 'uppercase' }}>{t('tabObserver')}</div>
                         <div style={{ fontSize: '1.5rem', fontWeight: 700 }}>{totalObs}</div>
                     </div>
                      <div style={{ textAlign: 'center' }}>
-                        <div style={{ fontSize: '0.8rem', color: '#86868b', fontWeight: 600, textTransform: 'uppercase' }}>Activities</div>
+                        <div style={{ fontSize: '0.8rem', color: 'var(--color-text-secondary)', fontWeight: 600, textTransform: 'uppercase' }}>Activities</div>
                         <div style={{ fontSize: '1.5rem', fontWeight: 700 }}>{totalActivities}</div>
                     </div>
                     <div style={{ textAlign: 'center' }}>
-                        <div style={{ fontSize: '0.8rem', color: '#86868b', fontWeight: 600, textTransform: 'uppercase' }}>Compliance</div>
+                        <div style={{ fontSize: '0.8rem', color: 'var(--color-text-secondary)', fontWeight: 600, textTransform: 'uppercase' }}>{t('compliance')}</div>
                         <div style={{ fontSize: '1.5rem', fontWeight: 700, color: compliance < 70 ? 'var(--color-danger)' : 'var(--color-success)' }}>
                             {compliance}%
                         </div>
                     </div>
                      <div style={{ textAlign: 'center' }}>
-                        <div style={{ fontSize: '0.8rem', color: '#86868b', fontWeight: 600, textTransform: 'uppercase' }}>Course Avg</div>
+                        <div style={{ fontSize: '0.8rem', color: 'var(--color-text-secondary)', fontWeight: 600, textTransform: 'uppercase' }}>{t('courseAvg')}</div>
                         <div style={{ fontSize: '1.5rem', fontWeight: 700 }}>{average}</div>
                     </div>
                   </>
@@ -672,7 +674,7 @@ export function CourseGradebook() {
                 fontWeight: 500,
                 cursor: 'pointer'
             }}>
-            Grades
+            {t('tabGrades')}
         </button>
         <button 
             onClick={() => setActiveTab('attendance')}
@@ -685,7 +687,7 @@ export function CourseGradebook() {
                 fontWeight: 500,
                 cursor: 'pointer'
             }}>
-            Attendance
+            {t('tabAttendance')}
         </button>
         <button 
             onClick={() => setActiveTab('observer')}
@@ -698,7 +700,7 @@ export function CourseGradebook() {
                 fontWeight: 500,
                 cursor: 'pointer'
             }}>
-            Observer
+            {t('tabObserver')}
         </button>
         <button 
             onClick={() => setActiveTab('materials')}
@@ -711,7 +713,7 @@ export function CourseGradebook() {
                 fontWeight: 500,
                 cursor: 'pointer'
             }}>
-            Materials Assignment
+            {t('tabMaterials')}
         </button>
         
       </div>
@@ -728,7 +730,7 @@ export function CourseGradebook() {
                             className="hover-bg-gray"
                         >
                              <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                VPS
+                                {t('vps')}
                                 <ArrowUpDown size={14} color={sortConfig.key === 'vps' ? 'var(--color-accent)' : '#ccc'} />
                             </div>
                         </th>
@@ -737,8 +739,8 @@ export function CourseGradebook() {
                             onClick={() => handleSort('name')}
                             className="hover-bg-gray"
                         >
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                Student Name
+                             <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                {t('studentName')}
                                 <ArrowUpDown size={14} color={sortConfig.key === 'name' ? 'var(--color-accent)' : '#ccc'} />
                             </div>
                         </th>
@@ -812,7 +814,7 @@ export function CourseGradebook() {
                                 <Plus size={20} />
                             </button>
                         </th>
-                        <th style={{ width: '100px', textAlign: 'center', color: 'var(--color-text-primary)' }}>Avg</th>
+                        <th style={{ width: '100px', textAlign: 'center', color: 'var(--color-text-primary)' }}>{t('finalGrade')}</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -925,7 +927,7 @@ export function CourseGradebook() {
                          className="btn btn-secondary"
                      >
                          <Plus size={16} style={{ marginRight: '6px' }} />
-                         Add Date
+                         {t('addDate')}
                      </button>
                 </div>
                 

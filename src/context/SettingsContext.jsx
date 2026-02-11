@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useEffect } from 'react';
+import { translations } from '../utils/translations';
 
 const SettingsContext = createContext();
 
@@ -31,8 +32,10 @@ export function SettingsProvider({ children }) {
         // Night: 18:00 (6pm) - 6:00 (6am)
         const isNight = hour >= 18 || hour < 6;
         setCurrentTheme(isNight ? 'dark' : 'light');
+      } else if (settings.themeMode === 'dark') {
+          setCurrentTheme('dark');
       } else {
-        setCurrentTheme(settings.themeMode);
+          setCurrentTheme('light');
       }
     };
 
@@ -45,10 +48,16 @@ export function SettingsProvider({ children }) {
   useEffect(() => {
     // Apply theme class to body
     document.body.setAttribute('data-theme', currentTheme);
+    // Also toggle a class for easier CSS targeting if needed
+    if (currentTheme === 'dark') {
+        document.body.classList.add('dark-mode');
+    } else {
+        document.body.classList.remove('dark-mode');
+    }
   }, [currentTheme]);
 
   const applyTheme = () => {
-      // Handled by effect above via currentTheme
+      // Handled by effect above via currentTheme logic
   };
 
   const applyFontSize = () => {
@@ -64,8 +73,14 @@ export function SettingsProvider({ children }) {
       setSettings(prev => ({ ...prev, ...newSettings }));
   };
 
+  // Translation Helper
+  const t = (key) => {
+      const lang = settings.language || 'es';
+      return translations[lang]?.[key] || key;
+  };
+
   return (
-    <SettingsContext.Provider value={{ settings, updateSettings, currentTheme }}>
+    <SettingsContext.Provider value={{ settings, updateSettings, currentTheme, t }}>
       {children}
     </SettingsContext.Provider>
   );

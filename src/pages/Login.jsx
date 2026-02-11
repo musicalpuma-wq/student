@@ -1,15 +1,18 @@
 import { useState } from 'react';
+import { useSettings } from '../context/SettingsContext';
 
 export function Login({ onLogin }) {
+  const { t } = useSettings();
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (password === '6251') {
+    const storedPassword = localStorage.getItem('app_password') || '6251'; // Default backup
+    if (password === storedPassword) {
       onLogin();
     } else {
-      setError('Incorrect password');
+      setError(t('invalidPassword'));
       setPassword('');
     }
   };
@@ -28,14 +31,15 @@ export function Login({ onLogin }) {
         background: 'var(--color-bg-primary)',
         padding: '2rem',
         borderRadius: '12px',
-        boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)',
+        boxShadow: '0 4px 6px -1px var(--shadow-light)',
         width: '100%',
-        maxWidth: '400px'
+        maxWidth: '400px',
+        border: '1px solid var(--color-border)'
       }}>
-        <h1 style={{ marginBottom: '1.5rem', textAlign: 'center' }}>Access Required</h1>
+        <h1 style={{ marginBottom: '1.5rem', textAlign: 'center' }}>{t('loginTitle')}</h1>
         <form onSubmit={handleSubmit} autoComplete="off">
           <div style={{ marginBottom: '1rem' }}>
-            <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.9rem' }}>Password</label>
+            <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.9rem' }}>{t('passwordPlaceholder')}</label>
             <input
               type="password"
               name="app_login_password_unique_v1"
@@ -48,13 +52,13 @@ export function Login({ onLogin }) {
               style={{ width: '100%', padding: '0.8rem' }}
             />
           </div>
-          {error && <p style={{ color: '#ef4444', marginBottom: '1rem', fontSize: '0.9rem' }}>{error}</p>}
+          {error && <p style={{ color: 'var(--color-danger)', marginBottom: '1rem', fontSize: '0.9rem' }}>{error}</p>}
           <button 
             type="submit" 
-            className="btn btn-primary"
+            className="btn"
             style={{ width: '100%', justifyContent: 'center' }}
           >
-            Enter
+            {t('loginButton')}
           </button>
         </form>
       </div>
