@@ -16,28 +16,24 @@ function App() {
    * Reloading the page will require logging in again.
    */
 
-  const handleLogin = () => {
-    setIsAuthenticated(true);
-  };
-
-  if (!isAuthenticated) {
-    return <Login onLogin={handleLogin} />;
-  }
-
   return (
     <SettingsProvider>
       <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<Layout />}>
-            <Route index element={<Dashboard />} />
-            <Route path="register" element={<StudentRegistration />} />
-            <Route path="course/:courseId" element={<CourseGradebook />} />
-            <Route path="downloads" element={<Downloads />} />
-          </Route>
-        </Routes>
+        {!isAuthenticated ? (
+           <Login onLogin={() => setIsAuthenticated(true)} />
+        ) : (
+          <Routes>
+            <Route path="/" element={<Layout />}>
+              <Route index element={<Dashboard />} />
+              <Route path="register" element={<StudentRegistration />} />
+              <Route path="course/:courseId" element={<CourseGradebook />} />
+              <Route path="downloads" element={<Downloads />} />
+            </Route>
+          </Routes>
+        )}
       </BrowserRouter>
     </SettingsProvider>
-  )
+  );
 }
 
 export default App
