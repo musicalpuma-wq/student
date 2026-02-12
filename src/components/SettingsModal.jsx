@@ -1,9 +1,11 @@
 import { useState } from 'react';
 import { useSettings } from '../context/SettingsContext';
+import { useGlobalModal } from '../context/GlobalModalContext';
 import { X, Moon, Sun, Monitor, Type, User, Book, Globe, Lock } from 'lucide-react';
 
 export function SettingsModal({ onClose }) {
   const { settings, updateSettings, currentTheme, t } = useSettings();
+  const { showAlert } = useGlobalModal();
   const [activeTab, setActiveTab] = useState('general'); // general, display, security
   
   // Local state for password change (simple version)
@@ -15,22 +17,22 @@ export function SettingsModal({ onClose }) {
       const storedPassword = localStorage.getItem('app_password') || '6251';
 
       if (passwordData.current !== storedPassword) {
-          alert(t('wrongCurrentPassword'));
+          showAlert(t('security'), t('wrongCurrentPassword'));
           return;
       }
       
       if (passwordData.new !== passwordData.confirm) {
-          alert(t('passwordMismatch'));
+          showAlert(t('security'), t('passwordMismatch'));
           return;
       }
 
       if (passwordData.new.length < 4) {
-          alert("Password must be at least 4 characters");
+          showAlert(t('security'), "Password must be at least 4 characters");
           return;
       }
       
       localStorage.setItem('app_password', passwordData.new);
-      alert(t('passwordUpdated'));
+      showAlert(t('security'), t('passwordUpdated'));
       setPasswordData({ current: '', new: '', confirm: '' });
   };
 

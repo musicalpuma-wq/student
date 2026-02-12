@@ -3,10 +3,14 @@ import { NavLink } from 'react-router-dom';
 import { LayoutDashboard, Users, FileSpreadsheet, Settings, Download, CloudUpload } from 'lucide-react';
 import { SettingsModal } from './SettingsModal';
 import { useSettings } from '../context/SettingsContext';
+import { useGlobalModal } from '../context/GlobalModalContext';
+import { useRef } from 'react';
 
 export function Sidebar() {
   const { settings, t } = useSettings();
+  const { showAlert, showConfirm } = useGlobalModal();
   const [showSettings, setShowSettings] = useState(false);
+  const fileInputRef = useRef(null);
   
   const navItems = [
     { icon: LayoutDashboard, label: t('dashboard'), path: '/' },
@@ -25,6 +29,7 @@ export function Sidebar() {
       const timeStr = now.toTimeString().split(' ')[0].replace(/:/g, '').substring(0, 4); // HHmm
       a.download = `backup-${dateStr}-${timeStr}.json`;
       a.click();
+      showAlert(t('backupRestore'), "Copia de seguridad descargada exitosamente.");
   };
 
   const handleImport = (event) => {
@@ -38,16 +43,28 @@ export function Sidebar() {
         // Basic validation
         if (json.students && json.activities) {
           localStorage.setItem('sms_data_v1', JSON.stringify(json));
-          alert('Data restored successfully! The page will reload.');
-          window.location.reload();
+          showAlert(t('backupRestore'), t('backupSuccess'), () => window.location.reload());
         } else {
-          alert('Invalid backup file format.');
+          showAlert(t('backupRestore'), 'Invalid backup file format.');
         }
       } catch (err) {
-        alert('Error parsing JSON file.');
+        showAlert(t('backupRestore'), t('backupError'));
       }
     };
     reader.readAsText(file);
+    // Reset value to allow re-uploading same file if failed
+    event.target.value = ''; 
+  };
+
+  const initiateRestore = () => {
+      showConfirm(
+          t('restoreBackup'),
+          t('restoreConfirm'),
+          () => {
+              // Confirmed
+              if (fileInputRef.current) fileInputRef.current.click();
+          }
+      );
   };
 
   return (
@@ -142,7 +159,9 @@ export function Sidebar() {
             {t('backupRestore')}
         </button>
         
-        <label 
+        {/* Restore Backup Button (Programmatic) */}
+        <button 
+            onClick={initiateRestore}
             style={{
               display: 'flex',
               alignItems: 'center',
@@ -158,21 +177,20 @@ export function Sidebar() {
               textAlign: 'left',
               fontFamily: 'inherit',
               fontSize: 'inherit',
+              border: 'none',
               marginTop: '0.2rem'
             }}
         >
             <Download size={20} />
             {t('restoreBackup')}
-            <input 
-                type="file" 
-                accept=".json" 
-                style={{ display: 'none' }} 
-                onChange={handleImport}
-                onClick={(e) => {
-                    if(!window.confirm(t('restoreConfirm'))) e.preventDefault();
-                }}
-            />
-        </label>
+        </button>
+        <input 
+            ref={fileInputRef}
+            type="file" 
+            accept=".json" 
+            style={{ display: 'none' }} 
+            onChange={handleImport}
+        />
 
         <button 
             onClick={(e) => {
@@ -181,7 +199,7 @@ export function Sidebar() {
                 window.open("https://drive.google.com/drive/folders/1KJfQ6nJ_hHReADMdTjD1woIfy9rrtE_x?usp=sharing", "_blank");
                 // Small timeout to allow download to start visually before alert
                 setTimeout(() => {
-                    alert(t('driveUploadInstruction'));
+                    showAlert(t('driveUpload'), t('driveUploadInstruction'));
                 }, 500);
             }}
             style={{

@@ -3,10 +3,12 @@ import { DataStore } from '../services/DataStore';
 import { useNavigate } from 'react-router-dom';
 import { Save, X } from 'lucide-react';
 import { useSettings } from '../context/SettingsContext';
+import { useGlobalModal } from '../context/GlobalModalContext';
 
 export function StudentRegistration() {
   const navigate = useNavigate();
   const { t } = useSettings();
+  const { showAlert } = useGlobalModal();
   const [formData, setFormData] = useState({
     name: '',
     course: '',
@@ -60,7 +62,7 @@ export function StudentRegistration() {
   const handleSubmit = (e) => {
     e.preventDefault();
     DataStore.addStudent(formData);
-    alert(t('studentRegistered'));
+    showAlert(t('registerTitle'), t('studentRegistered'));
     setFormData({
       name: '',
       course: '',
