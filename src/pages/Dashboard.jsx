@@ -104,10 +104,7 @@ export function Dashboard() {
     <div>
       <header style={{ marginBottom: '2.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', flexWrap: 'wrap', gap: '1rem' }}>
         <div>
-            <h1 style={{ fontSize: '2.5rem', letterSpacing: '-0.5px' }}>{t('welcome')}, {settings.teacherName}</h1>
-            <p style={{ color: 'var(--color-text-secondary)', fontSize: '1.1rem' }}>
-            {settings.subject}
-            </p>
+            <h1 style={{ fontSize: '2.5rem', letterSpacing: '-0.5px' }}>Dashboard</h1>
         </div>
         
         <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-end' }}>
