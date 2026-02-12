@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { NavLink } from 'react-router-dom';
-import { LayoutDashboard, Users, FileSpreadsheet, Settings, Download, CloudUpload } from 'lucide-react';
+import { LayoutDashboard, Users, FileSpreadsheet, Settings, Download, CloudUpload, GraduationCap } from 'lucide-react';
 import { SettingsModal } from './SettingsModal';
 import { useSettings } from '../context/SettingsContext';
 import { useGlobalModal } from '../context/GlobalModalContext';
@@ -84,7 +84,7 @@ export function Sidebar() {
       zIndex: 100
     }}>
       <div style={{ marginBottom: '3rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-        <img src="/logo-note.png" alt="AcademicFlow Logo" style={{ width: '40px', height: 'auto', marginRight: '0.5rem' }} />
+        <GraduationCap size={40} color="var(--color-accent)" style={{ marginRight: '0.5rem' }} />
         <h2 style={{ fontSize: '1.2rem', margin: 0 }}>Academic<span style={{color: 'var(--color-accent)'}}>Flow</span></h2>
       </div>
 
