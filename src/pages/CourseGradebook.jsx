@@ -34,6 +34,11 @@ export function CourseGradebook() {
 
   const [deleteCourseCanType, setDeleteCourseCanType] = useState(false);
 
+  // Course Details State
+  const [courseDirector, setCourseDirector] = useState('');
+  const [courseSchedule, setCourseSchedule] = useState('');
+  const [isEditingCourse, setIsEditingCourse] = useState(false); // Replaces isEditingCourseName
+
   // Security Code State
   const [showSecurityModal, setShowSecurityModal] = useState(false);
   const [securityCodeInput, setSecurityCodeInput] = useState('');
@@ -51,7 +56,13 @@ export function CourseGradebook() {
     const loadedStudents = DataStore.getStudentsByCourse(courseId);
     setStudents(loadedStudents);
     setActivities(DataStore.getActivities(courseId));
+    setStudents(loadedStudents);
+    setActivities(DataStore.getActivities(courseId));
     setMaterials(DataStore.getMaterials(courseId));
+    
+    const details = DataStore.getCourseDetails(courseId);
+    setCourseDirector(details.director || '');
+    setCourseSchedule(details.schedule || '');
 
     // Automated Observation Check
     let hasChanges = false;
@@ -417,16 +428,22 @@ export function CourseGradebook() {
   };
 
   // --- Attendance Logic ---
-  const toggleAttendance = (student) => {
-    const currentStatus = student.attendance?.[selectedDate] || 'present'; // Default present if not set? User said 'assign'.
-    // Let's cycle: present -> absent -> late -> present
-    const statusMap = { 'present': 'absent', 'absent': 'late', 'late': 'present', undefined: 'present' };
-    const nextStatus = statusMap[currentStatus] || 'present';
+  const toggleAttendance = (student, date) => {
+    const currentStatus = student.attendance?.[date]; // undefined if not set
+    // Cycle: undefined -> present -> absent -> late -> undefined
+    let nextStatus = 'present';
+    if (currentStatus === 'present') nextStatus = 'absent';
+    else if (currentStatus === 'absent') nextStatus = 'late';
+    else if (currentStatus === 'late') nextStatus = undefined;
     
-    const updatedStudent = { 
-        ...student, 
-        attendance: { ...student.attendance, [selectedDate]: nextStatus } 
-    };
+    const updatedStudent = { ...student, attendance: { ...student.attendance } };
+    
+    if (nextStatus) {
+        updatedStudent.attendance[date] = nextStatus;
+    } else {
+        delete updatedStudent.attendance[date];
+    }
+
     DataStore.updateStudent(updatedStudent);
     setStudents(prev => prev.map(s => s.id === student.id ? updatedStudent : s));
   };
@@ -472,14 +489,24 @@ export function CourseGradebook() {
       }
   };
 
-  const handleRenameCourse = (e) => {
+  const handleUpdateCourse = (e) => {
       e.preventDefault();
+      
+      // 1. Update Details
+      DataStore.updateCourseDetails(courseId, {
+          director: courseDirector,
+          schedule: courseSchedule
+      });
+
+      // 2. Update Name if changed
       if (newCourseName && newCourseName !== courseId) {
           DataStore.updateCourseName(courseId, newCourseName);
-          setIsEditingCourseName(false);
+          setIsEditingCourse(false); // Close modal
           navigate(`/course/${newCourseName}`);
       } else {
-          setIsEditingCourseName(false);
+          setIsEditingCourse(false); // Close modal
+          // Force refresh to show updated details if name didn't change
+          refreshData();
       }
   };
 
@@ -529,54 +556,98 @@ export function CourseGradebook() {
             <ChevronLeft size={20} />
         </Link>
         <div>
-            {isEditingCourseName ? (
-                <form onSubmit={handleRenameCourse} style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <input 
-                        className="input-field"
-                        style={{ fontSize: '1.5rem', fontWeight: 700, padding: '4px 8px', width: '200px' }}
-                        value={newCourseName}
-                        onChange={(e) => setNewCourseName(e.target.value)}
-                        autoFocus
-                    />
-                    <button type="submit" className="btn" style={{ padding: '8px' }} title="Save Name">
-                        <Save size={18} />
-                    </button>
-                    <button 
-                        type="button" 
-                        className="btn btn-secondary" 
-                        style={{ padding: '8px' }}
-                        onClick={() => setIsEditingCourseName(false)}
-                        title="Cancel"
-                    >
-                        <ChevronLeft size={18} style={{ transform: 'rotate(180deg)' }} /> 
-                        {/* Using ChevronLeft rotated as a generic 'back/cancel' or X icon if imported */}
-                    </button>
-                </form>
-            ) : (
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <h1 style={{ fontSize: '2rem', marginBottom: '0.2rem' }}>{courseId}</h1>
-                    <button 
-                        onClick={() => {
-                            setNewCourseName(courseId);
-                            setIsEditingCourseName(true);
-                        }}
-                        style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-text-secondary)', padding: '4px' }}
-                        title="Rename Course"
-                    >
-                        <Edit2 size={18} />
-                    </button>
-                    <button 
-                        onClick={() => requestSecurityCheck("delete this course", openDeleteModal)}
-                        style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-danger)', padding: '4px', marginLeft: '0.5rem' }}
-                        title="Delete Course"
-                    >
-                        <Trash2 size={18} />
-                    </button>
-                </div>
-            )}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <h1 style={{ fontSize: '2rem', marginBottom: '0.2rem' }}>{courseId}</h1>
+                <button 
+                    onClick={() => {
+                        setNewCourseName(courseId);
+                        // Ensure states are up to date (though useEffect sets them)
+                        // setCourseDirector inside modal open if needed, but state is already bound
+                        setIsEditingCourse(true);
+                    }}
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-text-secondary)', padding: '4px' }}
+                    title="Edit Course Details"
+                >
+                    <Edit2 size={18} />
+                </button>
+                <button 
+                    onClick={() => requestSecurityCheck("delete this course", openDeleteModal)}
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-danger)', padding: '4px', marginLeft: '0.5rem' }}
+                    title="Delete Course"
+                >
+                    <Trash2 size={18} />
+                </button>
+            </div>
             <p style={{ color: 'var(--color-text-secondary)' }}>{t('courseManagement')}</p>
+            {/* Display Director and Schedule */}
+            <div style={{ display: 'flex', gap: '2rem', marginTop: '0.5rem', fontSize: '0.9rem', color: 'var(--color-text-primary)' }}>
+                {courseDirector && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <UserSquare2 size={16} color="var(--color-accent)" />
+                        <strong>Director:</strong> {courseDirector}
+                    </div>
+                )}
+                {courseSchedule && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <Calendar size={16} color="var(--color-accent)" />
+                        <strong>Schedule:</strong> {courseSchedule}
+                    </div>
+                )}
+            </div>
         </div>
       </div>
+      
+      {/* Edit Course Modal */}
+      {isEditingCourse && (
+        <div style={{
+            position: 'fixed',
+            top: 0, left: 0, right: 0, bottom: 0,
+            background: 'rgba(0,0,0,0.5)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000,
+            backdropFilter: 'blur(5px)'
+        }}>
+            <div className="card" style={{ width: '400px', padding: '2rem' }}>
+                <h3 style={{ marginBottom: '1.5rem' }}>Edit Course Details</h3>
+                <form onSubmit={handleUpdateCourse}>
+                    <div style={{ marginBottom: '1rem' }}>
+                        <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.9rem', fontWeight: 500 }}>Course Name</label>
+                        <input 
+                            className="input-field" 
+                            value={newCourseName}
+                            onChange={e => setNewCourseName(e.target.value)}
+                            required
+                        />
+                    </div>
+                    <div style={{ marginBottom: '1rem' }}>
+                        <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.9rem', fontWeight: 500 }}>Group Director</label>
+                        <input 
+                            className="input-field" 
+                            value={courseDirector}
+                            onChange={e => setCourseDirector(e.target.value)}
+                            placeholder="e.g. Mr. Smith"
+                        />
+                    </div>
+                    <div style={{ marginBottom: '1.5rem' }}>
+                        <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.9rem', fontWeight: 500 }}>Class Schedule</label>
+                        <input 
+                            className="input-field" 
+                            value={courseSchedule}
+                            onChange={e => setCourseSchedule(e.target.value)}
+                            placeholder="e.g. Mon 8-10am"
+                        />
+                    </div>
+                    <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end' }}>
+                        <button type="button" className="btn btn-secondary" onClick={() => setIsEditingCourse(false)}>Cancel</button>
+                        <button type="submit" className="btn">Save Changes</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+      )}
+
       
       {/* Course Statistics Header */}
       <div style={{ 
@@ -997,86 +1068,65 @@ export function CourseGradebook() {
                     <tbody>
 
                          {getSortedStudents().map((student, index) => {
-                             const dates = Array.from(new Set(students.flatMap(s => Object.keys(s.attendance || {})))).sort();
-                             // Calculate totals
-                             const counts = { present: 0, absent: 0, late: 0 };
-                             Object.values(student.attendance || {}).forEach(status => {
-                                 if (counts[status] !== undefined) counts[status]++;
-                             });
+                            const dates = Array.from(new Set(students.flatMap(s => Object.keys(s.attendance || {})))).sort();
+                            // Calculate totals
+                            const counts = { present: 0, absent: 0, late: 0 };
+                            Object.values(student.attendance || {}).forEach(status => {
+                                if (counts[status] !== undefined) counts[status]++;
+                            });
 
-                             return (
-                                <tr key={student.id}>
-                                    <td style={{ textAlign: 'center', color: '#86868b', fontSize: '0.9rem' }}>{index + 1}</td>
-                                    <td style={{ fontSize: '0.9rem', color: 'var(--color-text-secondary)', padding: 0 }}>
-                                        <input 
-                                            className="input-field-transparent"
-                                            value={student.vpsCode || ''}
-                                            onChange={(e) => handleVPSChange(student, e.target.value)}
-                                            style={{ 
-                                                width: '100%', 
-                                                border: '1px solid transparent', 
-                                                background: 'transparent',
-                                                fontSize: '0.9rem',
-                                                color: 'var(--color-text-secondary)',
-                                                textAlign: 'center'
-                                            }}
-                                            placeholder="-"
-                                        />
-                                    </td>
-                                    <td style={{ fontWeight: 500 }}>{student.name}</td>
-                                    {dates.map(date => {
-                                        const status = student.attendance?.[date] || 'present'; // Default assumption if column exists? Or null?
-                                        // If the date exists in the derived set, we show it. 
-                                        // If student has no record, we can default to 'present' or '?'
-                                        // Let's toggle on click
-                                        const colorMap = { 'present': 'green', 'absent': 'red', 'late': 'orange' };
-                                        const dotColor = status === 'present' ? 'var(--color-success)' : status === 'absent' ? 'var(--color-danger)' : 'var(--color-warning)';
-                                        
-                                        return (
-                                            <td 
-                                                key={date} 
-                                                style={{ textAlign: 'center', cursor: 'pointer' }}
-                                                onClick={() => {
-                                                    // Logic: null/undefined -> 'present' -> 'absent' -> 'late' -> null
-                                                    let next = 'present';
-                                                    if (status === 'present') next = 'absent';
-                                                    else if (status === 'absent') next = 'late';
-                                                    else if (status === 'late') next = null; // Back to initial/null
-                                                    
-                                                    const updated = { ...student };
-                                                    if (!updated.attendance) updated.attendance = {};
-                                                    
-                                                    if (next) {
-                                                        updated.attendance[date] = next;
-                                                    } else {
-                                                        delete updated.attendance[date];
-                                                    }
-                                                    
-                                                    DataStore.updateStudent(updated);
-                                                    setStudents(prev => prev.map(s => s.id === student.id ? updated : s));
-                                                }}
-                                            >
-                                                <div style={{ 
-                                                    width: '12px', 
-                                                    height: '12px', 
-                                                    borderRadius: '50%', 
-                                                    background: !status ? 'white' : dotColor,
-                                                    border: !status ? '1px solid #ccc' : 'none',
-                                                    margin: '0 auto'
-                                                }} title={status || 'Not Taken'} />
-                                            </td>
-                                        );
-                                    })}
-                                    <td style={{ textAlign: 'center', fontWeight: 600, color: 'var(--color-success)' }}>{counts.present}</td>
-                                    <td style={{ textAlign: 'center', fontWeight: 600, color: 'var(--color-danger)' }}>{counts.absent}</td>
-                                    <td style={{ textAlign: 'center', fontWeight: 600, color: 'var(--color-warning)' }}>{counts.late}</td>
-                                </tr>
-                             );
-                         })}
-                    </tbody>
-                </table>
-            </div>
-        )}
+                            return (
+                               <tr key={student.id}>
+                                   <td style={{ textAlign: 'center', color: '#86868b', fontSize: '0.9rem' }}>{index + 1}</td>
+                                   <td style={{ fontSize: '0.9rem', color: 'var(--color-text-secondary)', padding: 0 }}>
+                                       <input 
+                                           className="input-field-transparent"
+                                           value={student.vpsCode || ''}
+                                           onChange={(e) => handleVPSChange(student, e.target.value)}
+                                           style={{ 
+                                               width: '100%', 
+                                               border: '1px solid transparent', 
+                                               background: 'transparent',
+                                               fontSize: '0.9rem',
+                                               color: 'var(--color-text-secondary)',
+                                               textAlign: 'center'
+                                           }}
+                                           placeholder="-"
+                                       />
+                                   </td>
+                                   <td style={{ fontWeight: 500 }}>{student.name}</td>
+                                   {dates.map(date => {
+                                       const status = student.attendance?.[date]; // No default 'present', allow undefined
+                                       
+                                       const dotColor = status === 'present' ? 'var(--color-success)' : status === 'absent' ? 'var(--color-danger)' : status === 'late' ? 'var(--color-warning)' : 'white';
+                                       
+                                       return (
+                                           <td 
+                                               key={date} 
+                                               style={{ textAlign: 'center', cursor: 'pointer' }}
+                                               onClick={() => toggleAttendance(student, date)} // Pass date explicitly
+                                           >
+                                               <div style={{ 
+                                                   width: '12px', 
+                                                   height: '12px', 
+                                                   borderRadius: '50%', 
+                                                   background: dotColor,
+                                                   border: !status ? '1px solid #ccc' : 'none',
+                                                   margin: '0 auto'
+                                               }} title={status || 'Not Taken'} />
+                                           </td>
+                                       );
+                                   })}
+                                   <td style={{ textAlign: 'center', fontWeight: 600, color: 'var(--color-success)' }}>{counts.present}</td>
+                                   <td style={{ textAlign: 'center', fontWeight: 600, color: 'var(--color-danger)' }}>{counts.absent}</td>
+                                   <td style={{ textAlign: 'center', fontWeight: 600, color: 'var(--color-warning)' }}>{counts.late}</td>
+                               </tr>
+                            );
+                        })}
+                   </tbody>
+               </table>
+           </div>
+       )}
 
         {activeTab === 'materials' && (
             <table style={{ width: '100%', minWidth: '800px' }}>
