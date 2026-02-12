@@ -970,7 +970,9 @@ export function CourseGradebook() {
                                                 border: '1px solid #d2d2d7', 
                                                 borderRadius: '6px',
                                                 fontSize: '0.95rem',
-                                                fontFamily: 'var(--font-family)'
+                                                fontFamily: 'var(--font-family)',
+                                                color: act.locked ? 'black' : 'var(--color-text-primary)',
+                                                backgroundColor: act.locked ? '#f5f5f7' : 'transparent' // Ensure background provides contrast for black text
                                             }}
                                             value={grade || ''}
                                             onChange={(e) => handleGradeChange(student, act.id, e.target.value)}

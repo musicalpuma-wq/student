@@ -319,7 +319,8 @@ export function Dashboard() {
                           borderRadius: '6px',
                           fontWeight: 600,
                           fontSize: '0.8rem',
-                          marginBottom: '0.5rem'
+                          marginBottom: '0.5rem',
+                          color: 'black' // Force black text for contrast
                         }}>
                           Course
                         </div>
