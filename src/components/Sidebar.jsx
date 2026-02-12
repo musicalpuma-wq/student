@@ -135,29 +135,7 @@ export function Sidebar() {
             {t('settings')}
         </button>
 
-        <button
-            onClick={handleBackup}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.75rem',
-              padding: '0.8rem 1rem',
-              borderRadius: 'var(--radius-md)',
-              color: 'var(--color-text-secondary)',
-              background: 'transparent',
-              textDecoration: 'none',
-              fontWeight: 500,
-              border: 'none',
-              cursor: 'pointer',
-              width: '100%',
-              textAlign: 'left',
-              fontFamily: 'inherit',
-              fontSize: 'inherit'
-            }}
-        >
-            <FileSpreadsheet size={20} />
-            {t('backupRestore')}
-        </button>
+
         
         {/* Restore Backup Button (Programmatic) */}
         <button 
