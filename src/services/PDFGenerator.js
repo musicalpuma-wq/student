@@ -28,6 +28,7 @@ export const PDFGenerator = {
       const tableHead = [];
       const headers = [];
       
+      if (selectedFields.studentCount) headers.push('#');
       if (selectedFields.vpsCode) headers.push('VPS');
       if (selectedFields.name) headers.push('Name');
       if (selectedFields.age) headers.push('Age');
@@ -40,8 +41,9 @@ export const PDFGenerator = {
       tableHead.push(headers);
 
       // Define Rows
-      const tableBody = students.map(s => {
+      const tableBody = students.map((s, i) => {
           const row = [];
+          if (selectedFields.studentCount) row.push(i + 1);
           if (selectedFields.vpsCode) row.push(s.vpsCode || '-');
           if (selectedFields.name) row.push(s.name);
           if (selectedFields.age) row.push(s.age);

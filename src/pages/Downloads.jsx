@@ -12,6 +12,7 @@ export function Downloads() {
   
   // Field Selector for Student Data
   const [selectedFields, setSelectedFields] = useState({
+      studentCount: false,
       vpsCode: true,
       name: true,
       age: true,
