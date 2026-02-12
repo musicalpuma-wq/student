@@ -150,7 +150,11 @@ export const translations = {
     downloadPDF: "Descargar PDF",
 
     // Settings
-    saveAndExit: "Guardar y Salir"
+    saveAndExit: "Guardar y Salir",
+    
+    // Drive
+    driveUploadInstruction: "Copia descargada. Arrástrela a la carpeta de Drive.",
+    driveUpload: "Subir data a Drive"
   },
   en: {
     // General
@@ -303,6 +307,10 @@ export const translations = {
     downloadPDF: "Download PDF",
 
     // Settings
-    saveAndExit: "Save & Exit"
+    saveAndExit: "Save & Exit",
+
+    // Drive
+    driveUploadInstruction: "Backup downloaded. Drag it to the Drive folder.",
+    driveUpload: "Upload to Drive"
   }
 };

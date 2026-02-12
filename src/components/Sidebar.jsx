@@ -174,10 +174,16 @@ export function Sidebar() {
             />
         </label>
 
-        <a 
-            href="https://drive.google.com/drive/folders/1KJfQ6nJ_hHReADMdTjD1woIfy9rrtE_x?usp=sharing"
-            target="_blank"
-            rel="noopener noreferrer"
+        <button 
+            onClick={(e) => {
+                e.preventDefault();
+                handleBackup();
+                window.open("https://drive.google.com/drive/folders/1KJfQ6nJ_hHReADMdTjD1woIfy9rrtE_x?usp=sharing", "_blank");
+                // Small timeout to allow download to start visually before alert
+                setTimeout(() => {
+                    alert(t('driveUploadInstruction'));
+                }, 500);
+            }}
             style={{
               display: 'flex',
               alignItems: 'center',
@@ -193,12 +199,13 @@ export function Sidebar() {
               textAlign: 'left',
               fontFamily: 'inherit',
               fontSize: 'inherit',
+              border: 'none',
               marginTop: '0.2rem'
             }}
         >
             <CloudUpload size={20} />
-            Subir data a Drive
-        </a>
+            {t('driveUpload')}
+        </button>
       </nav>
 
       <div style={{ marginTop: 'auto' }}>
