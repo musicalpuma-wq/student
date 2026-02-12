@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { NavLink } from 'react-router-dom';
-import { LayoutDashboard, Users, FileSpreadsheet, Settings, Download } from 'lucide-react';
+import { LayoutDashboard, Users, FileSpreadsheet, Settings, Download, CloudUpload } from 'lucide-react';
 import { SettingsModal } from './SettingsModal';
 import { useSettings } from '../context/SettingsContext';
 
@@ -173,6 +173,32 @@ export function Sidebar() {
                 }}
             />
         </label>
+
+        <a 
+            href="https://drive.google.com/drive/folders/1KJfQ6nJ_hHReADMdTjD1woIfy9rrtE_x?usp=sharing"
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.75rem',
+              padding: '0.8rem 1rem',
+              borderRadius: 'var(--radius-md)',
+              color: 'var(--color-text-secondary)',
+              background: 'transparent',
+              textDecoration: 'none',
+              fontWeight: 500,
+              cursor: 'pointer',
+              width: '100%',
+              textAlign: 'left',
+              fontFamily: 'inherit',
+              fontSize: 'inherit',
+              marginTop: '0.2rem'
+            }}
+        >
+            <CloudUpload size={20} />
+            Subir data a Drive
+        </a>
       </nav>
 
       <div style={{ marginTop: 'auto' }}>
