@@ -1170,8 +1170,8 @@ export function CourseGradebook() {
                             {t('studentName')}
                          </th>
                          {materials.map(mat => (
-                             <th key={mat.id} style={{ minWidth: '150px', cursor: 'pointer' }} onClick={() => setEditingMaterial(mat)}>
-                                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+                             <th key={mat.id} style={{ minWidth: '150px', cursor: 'pointer', textAlign: 'left', padding: '0.5rem' }} onClick={() => setEditingMaterial(mat)}>
+                                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', width: '18rem', margin: 0 }}>
                                      {mat.date && (
                                          <span style={{ fontSize: '0.7rem', color: 'var(--color-text-secondary)', fontWeight: 500 }}>
                                              {mat.date}
