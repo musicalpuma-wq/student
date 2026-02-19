@@ -161,6 +161,27 @@ export function CourseGradebook() {
     return { date: '', note: obsString };
   };
 
+  const handleUpdateMaterial = (e) => {
+      e.preventDefault();
+      if (editingMaterial) {
+          DataStore.updateMaterial(courseId, {
+              id: editingMaterial.id,
+              name: editingMaterial.name,
+              date: editingMaterial.date
+          });
+          setEditingMaterial(null);
+          refreshData();
+      }
+  };
+
+  const handleDeleteMaterial = (material) => {
+      requestSecurityCheck(`delete material column "${material.name}"`, () => {
+           DataStore.deleteMaterial(courseId, material.id);
+           setEditingMaterial(null);
+           refreshData();
+      });
+  };
+
   const refreshData = () => setRefreshTrigger(prev => prev + 1);
 
   // Sorting Logic
@@ -1149,10 +1170,16 @@ export function CourseGradebook() {
                             {t('studentName')}
                          </th>
                          {materials.map(mat => (
-                             <th key={mat.id} style={{ minWidth: '150px' }}>
-                                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', justifyContent: 'center' }}>
-                                     {mat.name}
-                                     {/* Rename logic could go here */}
+                             <th key={mat.id} style={{ minWidth: '150px', cursor: 'pointer' }} onClick={() => setEditingMaterial(mat)}>
+                                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+                                     {mat.date && (
+                                         <span style={{ fontSize: '0.7rem', color: 'var(--color-text-secondary)', fontWeight: 500 }}>
+                                             {mat.date}
+                                         </span>
+                                     )}
+                                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                         {mat.name}
+                                     </div>
                                  </div>
                              </th>
                          ))}
@@ -1190,7 +1217,7 @@ export function CourseGradebook() {
                                 <td key={mat.id} style={{ padding: '0.5rem' }}>
                                     <input 
                                         className="input-field"
-                                        style={{ width: '2.8125rem', fontSize: '0.9rem' }}
+                                        style={{ width: '18rem', fontSize: '0.9rem' }}
                                         placeholder={t('assign') || "Assign..."}
                                         value={student.materials?.[mat.id] || ''}
                                         onChange={(e) => handleMaterialValueChange(student, mat.id, e.target.value)}
@@ -1324,6 +1351,58 @@ export function CourseGradebook() {
              </table>
         )}
       </div>
+
+      {/* Edit Material Modal */}
+      {editingMaterial && (
+        <div style={{
+            position: 'fixed',
+            top: 0, left: 0, right: 0, bottom: 0,
+            background: 'rgba(0,0,0,0.5)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000,
+            backdropFilter: 'blur(5px)'
+        }}>
+            <div className="card" style={{ width: '400px', padding: '2rem' }}>
+                <h3 style={{ marginBottom: '1.5rem' }}>Edit Material Column</h3>
+                <form onSubmit={handleUpdateMaterial}>
+                    <div style={{ marginBottom: '1rem' }}>
+                        <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.9rem', fontWeight: 500 }}>Column Name</label>
+                        <input 
+                            className="input-field" 
+                            value={editingMaterial.name}
+                            onChange={e => setEditingMaterial({...editingMaterial, name: e.target.value})}
+                            required
+                        />
+                    </div>
+                    <div style={{ marginBottom: '1.5rem' }}>
+                         <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.9rem', fontWeight: 500 }}>Date (Optional)</label>
+                         <input 
+                            type="date"
+                            className="input-field" 
+                            value={editingMaterial.date || ''}
+                            onChange={e => setEditingMaterial({...editingMaterial, date: e.target.value})}
+                        />
+                    </div>
+                    <div style={{ display: 'flex', gap: '1rem', justifyContent: 'space-between' }}>
+                         <button 
+                            type="button" 
+                            className="btn btn-secondary" 
+                            style={{ color: 'var(--color-danger)', borderColor: 'var(--color-danger)' }}
+                            onClick={() => handleDeleteMaterial(editingMaterial)}
+                        >
+                            <Trash2 size={16} style={{ marginRight: '6px' }}/> Delete
+                        </button>
+                        <div style={{ display: 'flex', gap: '1rem' }}>
+                            <button type="button" className="btn btn-secondary" onClick={() => setEditingMaterial(null)}>Cancel</button>
+                            <button type="submit" className="btn">Save Changes</button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+      )}
 
       {/* Edit Activity Modal */}
       {editingActivity && (

@@ -330,6 +330,34 @@ export const DataStore = {
     return newMaterial;
   },
 
+  updateMaterial: (course, material) => {
+      const data = DataStore.load();
+      if (data.materials && data.materials[course]) {
+          const idx = data.materials[course].findIndex(m => m.id === material.id);
+          if (idx !== -1) {
+              data.materials[course][idx] = { ...data.materials[course][idx], ...material };
+              DataStore.save(data);
+          }
+      }
+  },
+
+  deleteMaterial: (course, materialId) => {
+      const data = DataStore.load();
+      if (data.materials && data.materials[course]) {
+          // Remove material definition
+          data.materials[course] = data.materials[course].filter(m => m.id !== materialId);
+          
+          // Remove values for this material
+          data.students.forEach(s => {
+              if (s.course === course && s.materials) {
+                  delete s.materials[materialId];
+              }
+          });
+          
+          DataStore.save(data);
+      }
+  },
+
   // Seed Data
   seedMockData: () => {
     const mockStudents = Array.from({ length: 50 }).map((_, i) => ({
