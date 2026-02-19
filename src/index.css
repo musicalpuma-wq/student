@@ -152,3 +152,15 @@ th {
     background: rgba(28, 28, 30, 0.8);
     border: 1px solid rgba(255, 255, 255, 0.1);
 }
+
+/* Base utility context for inputs with no spinners */
+.no-spin::-webkit-inner-spin-button,
+.no-spin::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.no-spin {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}

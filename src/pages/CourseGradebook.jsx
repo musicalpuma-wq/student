@@ -974,6 +974,7 @@ export function CourseGradebook() {
                                                 color: act.locked ? 'black' : 'var(--color-text-primary)',
                                                 backgroundColor: act.locked ? '#f5f5f7' : 'transparent' // Ensure background provides contrast for black text
                                             }}
+                                            className="no-spin"
                                             value={grade || ''}
                                             onChange={(e) => handleGradeChange(student, act.id, e.target.value)}
                                             onBlur={(e) => {
@@ -1189,7 +1190,7 @@ export function CourseGradebook() {
                                 <td key={mat.id} style={{ padding: '0.5rem' }}>
                                     <input 
                                         className="input-field"
-                                        style={{ width: '100%', fontSize: '0.9rem' }}
+                                        style={{ width: '2.8125rem', fontSize: '0.9rem' }}
                                         placeholder={t('assign') || "Assign..."}
                                         value={student.materials?.[mat.id] || ''}
                                         onChange={(e) => handleMaterialValueChange(student, mat.id, e.target.value)}
