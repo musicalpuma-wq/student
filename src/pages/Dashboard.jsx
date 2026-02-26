@@ -4,11 +4,6 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Plus, BookOpen, Clock, User, UserSquare2, FileText, ChevronRight } from 'lucide-react';
 import { useSettings } from '../context/SettingsContext';
 
-// Import our custom generated mascots
-import dogSprite from '../assets/mascots/dog_expressions_1772072192837.png';
-import bearSprite from '../assets/mascots/bear_expressions_1772072389607.png';
-import foxSprite from '../assets/mascots/fox_expressions_1772072479181.png';
-
 export function Dashboard() {
   const navigate = useNavigate();
   const { settings, t } = useSettings();
@@ -16,29 +11,6 @@ export function Dashboard() {
   const [stats, setStats] = useState({ totalStudents: 0, totalCourses: 0 });
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState([]);
-  
-  // Custom Mascot configuration
-  const mascotAssets = [
-      { name: 'dog', src: dogSprite },
-      { name: 'bear', src: bearSprite },
-      { name: 'fox', src: foxSprite }
-  ];
-
-  // Gets the exact horizontal offset percentage for the 1x5 sprite sheet
-  const getSpriteOffset = (avgScore) => {
-      // With background-size: 500% 100%, the 5 frames are at:
-      // Frame 1: 0%
-      // Frame 2: 25%
-      // Frame 3: 50%
-      // Frame 4: 75%
-      // Frame 5: 100%
-      if (avgScore >= 4.5) return '0%';      // Starry eyes
-      if (avgScore >= 3.5) return '25%';     // Smiling
-      if (avgScore >= 3.0) return '50%';     // Neutral
-      if (avgScore >= 2.0) return '75%';     // Sad/Crying
-      return '100%';                         // Angry
-  };
-  
   // Create Course State
   const [showCreateCourseModal, setShowCreateCourseModal] = useState(false);
   const [newCourseGrade, setNewCourseGrade] = useState('');
@@ -260,48 +232,40 @@ export function Dashboard() {
                           ? 'var(--color-danger)' 
                           : 'var(--color-success)';
 
-                      // Deterministic selection of animal based on course name
-                      let hash = 0;
-                      for (let i = 0; i < course.length; i++) {
-                          hash = course.charCodeAt(i) + ((hash << 5) - hash);
-                      }
-                      
-                      const animalIndex = Math.abs(hash) % mascotAssets.length;
-                      const selectedMascot = mascotAssets[animalIndex];
-                      
-                      let mascotClass = '';
+                      let emojiFace = '';
                       let questionMarks = null;
                       
                       if (avg >= 4.5) {
-                          mascotClass = 'mascot-excellent'; // Bounce
+                          emojiFace = '🤩'; 
                       } else if (avg >= 3.5) {
-                          mascotClass = 'mascot-good'; // Float
+                          emojiFace = '😁'; 
                       } else if (avg >= 3.0) {
-                          mascotClass = 'mascot-fair'; // Normal
+                          emojiFace = '😐'; 
                       } else if (avg >= 2.0) {
-                          mascotClass = 'mascot-poor'; // Drooping
+                          emojiFace = '😢'; 
                           questionMarks = <span style={{ position: 'absolute', top: '-15px', right: '-10px', fontSize: '1.2rem', color: 'red', fontWeight: 'bold', animation: 'mascot-float 1s infinite', zIndex: 10 }}>❓❓</span>;
                       } else {
-                          mascotClass = 'mascot-fail'; // Shaking
+                          emojiFace = '😡'; 
                       }
 
                       return (
                           <div key={course} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem', minWidth: '40px', height: '100%', justifyContent: 'flex-end', position: 'relative' }}>
                                {questionMarks}
-                               <div className={`mascot-sprite-container ${mascotClass}`}>
-                                   <div 
-                                      className="mascot-sprite-image"
-                                      style={{
-                                          backgroundImage: `url(${selectedMascot.src})`,
-                                          backgroundSize: '500% 100%', 
-                                          backgroundPosition: `${getSpriteOffset(avg)} 0`,
-                                          backgroundRepeat: 'no-repeat',
-                                          width: '100%',
-                                          height: '100%',
-                                          position: 'absolute',
-                                          top: 0, left: 0
-                                      }}
-                                   />
+                               <div className="mascot-excellent" style={{
+                                   display: 'flex',
+                                   alignItems: 'center',
+                                   justifyContent: 'center',
+                                   width: '42px',
+                                   height: '42px',
+                                   fontSize: '2rem',
+                                   background: 'white',
+                                   borderRadius: '50%',
+                                   boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
+                                   marginBottom: '-8px',
+                                   zIndex: 2,
+                                   border: `2px solid var(--color-bg-card)`
+                               }}>
+                                   {emojiFace}
                                </div>
                                <div style={{ 
                                    fontWeight: 700, 
