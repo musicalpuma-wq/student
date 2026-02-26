@@ -240,7 +240,7 @@ th {
   top: 0;
   left: 0;
   height: 100%;
-  width: 500%; /* Because there are 5 frames horizontal */
+  width: 100%;
   transition: transform 0.3s ease-in-out;
 }
 

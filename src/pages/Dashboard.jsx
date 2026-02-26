@@ -26,11 +26,17 @@ export function Dashboard() {
 
   // Gets the exact horizontal offset percentage for the 1x5 sprite sheet
   const getSpriteOffset = (avgScore) => {
+      // With background-size: 500% 100%, the 5 frames are at:
+      // Frame 1: 0%
+      // Frame 2: 25%
+      // Frame 3: 50%
+      // Frame 4: 75%
+      // Frame 5: 100%
       if (avgScore >= 4.5) return '0%';      // Starry eyes
-      if (avgScore >= 3.5) return '-100%';   // Smiling
-      if (avgScore >= 3.0) return '-200%';   // Neutral
-      if (avgScore >= 2.0) return '-300%';   // Sad/Crying
-      return '-400%';                        // Angry
+      if (avgScore >= 3.5) return '25%';     // Smiling
+      if (avgScore >= 3.0) return '50%';     // Neutral
+      if (avgScore >= 2.0) return '75%';     // Sad/Crying
+      return '100%';                         // Angry
   };
   
   // Create Course State
@@ -287,9 +293,13 @@ export function Dashboard() {
                                       className="mascot-sprite-image"
                                       style={{
                                           backgroundImage: `url(${selectedMascot.src})`,
-                                          backgroundSize: '500% 100%', // 5 frames wide
+                                          backgroundSize: '500% 100%', 
                                           backgroundPosition: `${getSpriteOffset(avg)} 0`,
-                                          backgroundRepeat: 'no-repeat'
+                                          backgroundRepeat: 'no-repeat',
+                                          width: '100%',
+                                          height: '100%',
+                                          position: 'absolute',
+                                          top: 0, left: 0
                                       }}
                                    />
                                </div>
