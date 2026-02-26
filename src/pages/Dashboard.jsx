@@ -11,6 +11,8 @@ export function Dashboard() {
   const [stats, setStats] = useState({ totalStudents: 0, totalCourses: 0 });
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState([]);
+  const [showEmojis, setShowEmojis] = useState(true);
+  const [emojiSize, setEmojiSize] = useState(42);
   // Create Course State
   const [showCreateCourseModal, setShowCreateCourseModal] = useState(false);
   const [newCourseGrade, setNewCourseGrade] = useState('');
@@ -210,7 +212,31 @@ export function Dashboard() {
       {/* Performance Chart */ }
       {courses.length > 0 && (
           <div className="card" style={{ marginBottom: '3rem', padding: '2rem' }}>
-              <h3 style={{ fontSize: '1.2rem', marginBottom: '1.5rem', color: 'var(--color-text-primary)' }}>{t('coursePerformance')}</h3>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '1rem' }}>
+                  <h3 style={{ fontSize: '1.2rem', margin: 0, color: 'var(--color-text-primary)' }}>{t('coursePerformance')}</h3>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem', background: 'var(--color-bg-secondary)', padding: '0.6rem 1.2rem', borderRadius: '8px' }}>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.9rem', cursor: 'pointer', fontWeight: 500 }}>
+                          <input 
+                              type="checkbox" 
+                              checked={showEmojis} 
+                              onChange={(e) => setShowEmojis(e.target.checked)}
+                              style={{ width: '16px', height: '16px', cursor: 'pointer', accentColor: 'var(--color-accent)' }}
+                          />
+                          Show Emojis
+                      </label>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.8rem', fontSize: '0.9rem', fontWeight: 500, opacity: showEmojis ? 1 : 0.5, transition: 'opacity 0.2s' }}>
+                          <span>Size: {emojiSize}px</span>
+                          <input 
+                              type="range" 
+                              min="20" max="80" 
+                              value={emojiSize} 
+                              onChange={(e) => setEmojiSize(Number(e.target.value))}
+                              disabled={!showEmojis}
+                              style={{ width: '100px', cursor: showEmojis ? 'pointer' : 'not-allowed', accentColor: 'var(--color-accent)' }}
+                          />
+                      </div>
+                  </div>
+              </div>
               <div style={{ 
                   display: 'flex', 
                   alignItems: 'flex-end', 
@@ -228,9 +254,12 @@ export function Dashboard() {
                       // y = (val - 1) / (5 - 1) * 100
                       const heightPercent = Math.max(0, Math.min(((avg - 1) / 4) * 100, 100)); // Normalize 1-5 to 0-100%
                       
-                      const finalBg = avg < 3.0 
-                          ? 'var(--color-danger)' 
-                          : 'var(--color-success)';
+                      let finalBg = 'var(--color-success)';
+                      if (avg < 3.0) {
+                          finalBg = 'var(--color-danger)';
+                      } else if (avg < 4.0) {
+                          finalBg = 'var(--color-warning)'; // Orange for 3.0 to 3.9
+                      }
 
                       let emojiFace = '';
                       let mascotClass = '';
@@ -254,22 +283,25 @@ export function Dashboard() {
 
                       return (
                           <div key={course} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem', minWidth: '40px', height: '100%', justifyContent: 'flex-end', position: 'relative' }}>
-                               <div className={mascotClass} style={{
-                                   display: 'flex',
-                                   alignItems: 'center',
-                                   justifyContent: 'center',
-                                   width: '42px',
-                                   height: '42px',
-                                   fontSize: '2rem',
-                                   background: 'white',
-                                   borderRadius: '50%',
-                                   boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
-                                   marginBottom: '-8px',
-                                   zIndex: 2,
-                                   border: `2px solid var(--color-bg-card)`
-                               }}>
-                                   {emojiFace}
-                               </div>
+                               {showEmojis && (
+                                   <div className={mascotClass} style={{
+                                       display: 'flex',
+                                       alignItems: 'center',
+                                       justifyContent: 'center',
+                                       width: `${emojiSize}px`,
+                                       height: `${emojiSize}px`,
+                                       fontSize: `${emojiSize * 0.5}px`, // Make font size proportional to the circle
+                                       background: 'white',
+                                       borderRadius: '50%',
+                                       boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
+                                       marginBottom: '-8px',
+                                       zIndex: 2,
+                                       border: `2px solid var(--color-bg-card)`,
+                                       transition: 'width 0.2s, height 0.2s, font-size 0.2s'
+                                   }}>
+                                       {emojiFace}
+                                   </div>
+                               )}
                                <div style={{ 
                                    fontWeight: 700, 
                                    fontSize: '0.8rem', 
