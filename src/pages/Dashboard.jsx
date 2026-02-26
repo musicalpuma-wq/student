@@ -234,22 +234,23 @@ export function Dashboard() {
                           : 'var(--color-success)';
 
                       // Deterministic selection of animal based on course name
+                      // Verified working animals from Noto Emoji 
                       const animalEmojis = [
-                          '1f989', // Owl
-                          '1f98a', // Fox
-                          '1f43b', // Bear
-                          '1f42d', // Mouse
-                          '1f43c', // Panda
-                          '1f981', // Lion
-                          '1f428', // Koala
-                          '1f430', // Rabbit
-                          '1f438', // Frog
-                          '1f985', // Eagle
-                          '1f42f', // Tiger
-                          '1f435', // Monkey
-                          '1f43d', // Pig
-                          '1f436', // Dog
-                          '1f9a6'  // Otter
+                          '1f400', // Rat 🐀
+                          '1f402', // Ox 🐂
+                          '1f405', // Tiger 🐅
+                          '1f407', // Rabbit 🐇
+                          '1f409', // Dragon 🐉
+                          '1f40c', // Snail 🐌
+                          '1f40d', // Snake 🐍
+                          '1f40e', // Horse 🐎
+                          '1f410', // Goat 🐐
+                          '1f412', // Monkey 🐒
+                          '1f413', // Rooster 🐓
+                          '1f415', // Dog 🐕
+                          '1f416', // Pig 🐖
+                          '1f422', // Turtle 🐢
+                          '1f42e'  // Cow face 🐮
                       ];
                       
                       // Hash function for predictable selection
@@ -261,13 +262,11 @@ export function Dashboard() {
                       const animalIndex = Math.abs(hash) % animalEmojis.length;
                       const selectedAnimal = animalEmojis[animalIndex];
                       
-                      // If the selected animal is a cat (we don't have it in the list anymore to favor others, but if we did we could use the complex states here)
-                      // For now, these animals only have one state so we use CSS to show emotion
                       const mascotUrl = `https://fonts.gstatic.com/s/e/notoemoji/latest/${selectedAnimal}/512.gif`;
 
                       let mascotClass = '';
                       let questionMarks = null;
-
+                      
                       if (avg >= 4.5) {
                           mascotClass = 'mascot-excellent'; // Bounce
                       } else if (avg >= 3.5) {
@@ -276,7 +275,6 @@ export function Dashboard() {
                           mascotClass = 'mascot-fair'; // Normal
                       } else if (avg >= 2.0) {
                           mascotClass = 'mascot-poor'; // Drooping + Slight Grayscale
-                          // Add confusion marks
                           questionMarks = <span style={{ position: 'absolute', top: '-10px', right: '-15px', fontSize: '1.2rem', color: 'red', fontWeight: 'bold', animation: 'mascot-float 1s infinite' }}>❓❓</span>;
                       } else {
                           mascotClass = 'mascot-fail'; // Shaking + Grayscale
@@ -287,10 +285,10 @@ export function Dashboard() {
                                {questionMarks}
                                <img 
                                   src={mascotUrl} 
-                                  alt={`${course} Mascot`} 
+                                  alt="Course Mascot" 
                                   className={mascotClass}
                                   style={{ 
-                                      width: '45px', // Slightly larger for these animals
+                                      width: '45px', // slightly bigger to account for full body animals
                                       height: '45px', 
                                       marginBottom: '-10px', // Overlap bar slightly
                                       zIndex: 2,
