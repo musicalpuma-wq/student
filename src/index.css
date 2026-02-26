@@ -164,3 +164,59 @@ th {
   -moz-appearance: textfield;
   appearance: textfield;
 }
+
+/* Mascot Animations */
+@keyframes bar-grow {
+  from { height: 0; opacity: 0; }
+  to { opacity: 0.9; }
+}
+
+@keyframes mascot-bounce {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-8px); }
+}
+
+@keyframes mascot-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-4px); }
+}
+
+@keyframes mascot-droop {
+  0%, 100% { transform: rotate(0); }
+  50% { transform: rotate(5deg) translateY(2px); }
+}
+
+@keyframes mascot-shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-3px); }
+  75% { transform: translateX(3px); }
+}
+
+.animate-bar {
+  animation: bar-grow 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+
+.mascot-excellent {
+  animation: mascot-bounce 1s infinite ease-in-out;
+  filter: drop-shadow(0 4px 6px rgba(0,0,0,0.1));
+}
+
+.mascot-good {
+  animation: mascot-float 2s infinite ease-in-out;
+  filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1));
+}
+
+.mascot-fair {
+  /* No animation just normal */
+  filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1));
+}
+
+.mascot-poor {
+  animation: mascot-droop 3s infinite ease-in-out;
+  filter: grayscale(0.2) drop-shadow(0 2px 4px rgba(0,0,0,0.1));
+}
+
+.mascot-fail {
+  animation: mascot-shake 0.5s infinite ease-in-out;
+  filter: grayscale(0.5) contrast(1.2) drop-shadow(0 2px 4px rgba(0,0,0,0.1));
+}

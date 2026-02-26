@@ -216,12 +216,13 @@ export function Dashboard() {
                   display: 'flex', 
                   alignItems: 'flex-end', 
                   gap: '2rem', 
-                  height: '250px', 
+                  height: '280px', /* Increased height slightly for the mascots */
                   overflowX: 'auto',
                   paddingBottom: '1rem',
-                  borderBottom: '1px solid var(--color-border)'
+                  borderBottom: '1px solid var(--color-border)',
+                  paddingTop: '2rem'
               }}>
-                  {courses.map(course => {
+                  {courses.map((course, idx) => {
                       const stats = calculateCourseStats(course);
                       const avg = parseFloat(stats.avg);
                       // Scale: 1.0 to 5.0
@@ -232,27 +233,73 @@ export function Dashboard() {
                           ? 'var(--color-danger)' 
                           : 'var(--color-success)';
 
+                      // Gamification logic
+                      let mascotUrl = '';
+                      let mascotClass = '';
+                      
+                      if (avg >= 4.5) {
+                          mascotUrl = 'https://fonts.gstatic.com/s/e/notoemoji/latest/1f63b/512.gif'; // Heart eyes cat
+                          mascotClass = 'mascot-excellent';
+                      } else if (avg >= 3.5) {
+                          mascotUrl = 'https://fonts.gstatic.com/s/e/notoemoji/latest/1f638/512.gif'; // Grinning cat
+                          mascotClass = 'mascot-good';
+                      } else if (avg >= 3.0) {
+                          mascotUrl = 'https://fonts.gstatic.com/s/e/notoemoji/latest/1f63c/512.gif'; // Wry smile cat
+                          mascotClass = 'mascot-fair';
+                      } else if (avg >= 2.0) {
+                          mascotUrl = 'https://fonts.gstatic.com/s/e/notoemoji/latest/1f63f/512.gif'; // Crying cat
+                          mascotClass = 'mascot-poor';
+                      } else {
+                          mascotUrl = 'https://fonts.gstatic.com/s/e/notoemoji/latest/1f63e/512.gif'; // Pouting cat
+                          mascotClass = 'mascot-fail';
+                      }
+
                       return (
                           <div key={course} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem', minWidth: '40px', height: '100%', justifyContent: 'flex-end' }}>
+                               <img 
+                                  src={mascotUrl} 
+                                  alt="Course Mascot" 
+                                  className={mascotClass}
+                                  style={{ 
+                                      width: '40px', 
+                                      height: '40px', 
+                                      marginBottom: '-10px', // Overlap bar slightly
+                                      zIndex: 2,
+                                      objectFit: 'contain'
+                                  }} 
+                               />
                                <div style={{ 
                                    fontWeight: 700, 
                                    fontSize: '0.8rem', 
-                                   color: finalBg
+                                   color: finalBg,
+                                   zIndex: 3,
+                                   textShadow: '0 1px 2px rgba(255,255,255,0.8)'
                                }}>
                                    {stats.avg}
                                </div>
                                <div 
+                                  className="animate-bar"
                                   style={{ 
                                       width: '30px', 
                                       height: `${heightPercent}%`, 
                                       background: finalBg,
                                       borderRadius: '4px 4px 0 0',
-                                      transition: 'height 0.5s ease',
                                       opacity: 0.9,
-                                      minHeight: '4px' // Visibility for 1.0
+                                      minHeight: '4px', // Visibility for 1.0
+                                      animationDelay: `${idx * 0.1}s`, // Staggered entrance
+                                      boxShadow: 'inset 0 2px 4px rgba(255,255,255,0.3)',
+                                      position: 'relative'
                                   }} 
                                   title={`${course}: ${stats.avg}`}
-                               />
+                               >
+                                   {/* Shiny effect on the bar */}
+                                   <div style={{
+                                       position: 'absolute',
+                                       top: 0, left: 0, right: 0, bottom: 0,
+                                       background: 'linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.2) 50%, rgba(255,255,255,0) 100%)',
+                                       borderRadius: 'inherit'
+                                   }} />
+                               </div>
                                <div style={{ fontSize: '0.85rem', fontWeight: 500, color: 'var(--color-text-secondary)', marginTop: '0.5rem' }}>
                                    {course}
                                </div>
