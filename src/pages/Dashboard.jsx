@@ -233,36 +233,65 @@ export function Dashboard() {
                           ? 'var(--color-danger)' 
                           : 'var(--color-success)';
 
-                      // Gamification logic
-                      let mascotUrl = '';
-                      let mascotClass = '';
+                      // Deterministic selection of animal based on course name
+                      const animalEmojis = [
+                          '1f989', // Owl
+                          '1f98a', // Fox
+                          '1f43b', // Bear
+                          '1f42d', // Mouse
+                          '1f43c', // Panda
+                          '1f981', // Lion
+                          '1f428', // Koala
+                          '1f430', // Rabbit
+                          '1f438', // Frog
+                          '1f985', // Eagle
+                          '1f42f', // Tiger
+                          '1f435', // Monkey
+                          '1f43d', // Pig
+                          '1f436', // Dog
+                          '1f9a6'  // Otter
+                      ];
                       
+                      // Hash function for predictable selection
+                      let hash = 0;
+                      for (let i = 0; i < course.length; i++) {
+                          hash = course.charCodeAt(i) + ((hash << 5) - hash);
+                      }
+                      
+                      const animalIndex = Math.abs(hash) % animalEmojis.length;
+                      const selectedAnimal = animalEmojis[animalIndex];
+                      
+                      // If the selected animal is a cat (we don't have it in the list anymore to favor others, but if we did we could use the complex states here)
+                      // For now, these animals only have one state so we use CSS to show emotion
+                      const mascotUrl = `https://fonts.gstatic.com/s/e/notoemoji/latest/${selectedAnimal}/512.gif`;
+
+                      let mascotClass = '';
+                      let questionMarks = null;
+
                       if (avg >= 4.5) {
-                          mascotUrl = 'https://fonts.gstatic.com/s/e/notoemoji/latest/1f63b/512.gif'; // Heart eyes cat
-                          mascotClass = 'mascot-excellent';
+                          mascotClass = 'mascot-excellent'; // Bounce
                       } else if (avg >= 3.5) {
-                          mascotUrl = 'https://fonts.gstatic.com/s/e/notoemoji/latest/1f638/512.gif'; // Grinning cat
-                          mascotClass = 'mascot-good';
+                          mascotClass = 'mascot-good'; // Float
                       } else if (avg >= 3.0) {
-                          mascotUrl = 'https://fonts.gstatic.com/s/e/notoemoji/latest/1f63c/512.gif'; // Wry smile cat
-                          mascotClass = 'mascot-fair';
+                          mascotClass = 'mascot-fair'; // Normal
                       } else if (avg >= 2.0) {
-                          mascotUrl = 'https://fonts.gstatic.com/s/e/notoemoji/latest/1f63f/512.gif'; // Crying cat
-                          mascotClass = 'mascot-poor';
+                          mascotClass = 'mascot-poor'; // Drooping + Slight Grayscale
+                          // Add confusion marks
+                          questionMarks = <span style={{ position: 'absolute', top: '-10px', right: '-15px', fontSize: '1.2rem', color: 'red', fontWeight: 'bold', animation: 'mascot-float 1s infinite' }}>❓❓</span>;
                       } else {
-                          mascotUrl = 'https://fonts.gstatic.com/s/e/notoemoji/latest/1f63e/512.gif'; // Pouting cat
-                          mascotClass = 'mascot-fail';
+                          mascotClass = 'mascot-fail'; // Shaking + Grayscale
                       }
 
                       return (
-                          <div key={course} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem', minWidth: '40px', height: '100%', justifyContent: 'flex-end' }}>
+                          <div key={course} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem', minWidth: '40px', height: '100%', justifyContent: 'flex-end', position: 'relative' }}>
+                               {questionMarks}
                                <img 
                                   src={mascotUrl} 
-                                  alt="Course Mascot" 
+                                  alt={`${course} Mascot`} 
                                   className={mascotClass}
                                   style={{ 
-                                      width: '40px', 
-                                      height: '40px', 
+                                      width: '45px', // Slightly larger for these animals
+                                      height: '45px', 
                                       marginBottom: '-10px', // Overlap bar slightly
                                       zIndex: 2,
                                       objectFit: 'contain'
