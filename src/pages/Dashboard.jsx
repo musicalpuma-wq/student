@@ -233,25 +233,28 @@ export function Dashboard() {
                           : 'var(--color-success)';
 
                       let emojiFace = '';
-                      let questionMarks = null;
+                      let mascotClass = '';
                       
                       if (avg >= 4.5) {
                           emojiFace = '🤩'; 
+                          mascotClass = 'mascot-excellent';
                       } else if (avg >= 3.5) {
                           emojiFace = '😁'; 
+                          mascotClass = 'mascot-good';
                       } else if (avg >= 3.0) {
                           emojiFace = '😐'; 
+                          mascotClass = 'mascot-fair';
                       } else if (avg >= 2.0) {
                           emojiFace = '😢'; 
-                          questionMarks = <span style={{ position: 'absolute', top: '-15px', right: '-10px', fontSize: '1.2rem', color: 'red', fontWeight: 'bold', animation: 'mascot-float 1s infinite', zIndex: 10 }}>❓❓</span>;
+                          mascotClass = 'mascot-poor';
                       } else {
                           emojiFace = '😡'; 
+                          mascotClass = 'mascot-fail';
                       }
 
                       return (
                           <div key={course} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem', minWidth: '40px', height: '100%', justifyContent: 'flex-end', position: 'relative' }}>
-                               {questionMarks}
-                               <div className="mascot-excellent" style={{
+                               <div className={mascotClass} style={{
                                    display: 'flex',
                                    alignItems: 'center',
                                    justifyContent: 'center',
