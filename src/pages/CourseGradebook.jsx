@@ -476,6 +476,27 @@ export function CourseGradebook() {
       });
   };
 
+  const handleCopyTotalAbsences = () => {
+      const sortedStudents = getSortedStudents();
+      const textToCopy = sortedStudents.map(student => {
+          let absents = 0;
+          Object.values(student.attendance || {}).forEach(status => {
+              if (status === 'absent') absents++;
+          });
+          return absents;
+      }).join('\n');
+      
+      navigator.clipboard.writeText(textToCopy).then(() => {
+          showModal({
+              type: 'alert',
+              title: 'Copied!',
+              message: 'Total absences have been copied to your clipboard.',
+              onConfirm: closeModal,
+              onCancel: closeModal
+          });
+      });
+  };
+
   // --- Attendance Logic ---
   const toggleAttendance = (student, date) => {
     const currentStatus = student.attendance?.[date]; // undefined if not set
@@ -1142,7 +1163,18 @@ export function CourseGradebook() {
                                 </th>
                             ))}
                             <th style={{ textAlign: 'center', color: 'var(--color-success)', width: '40px' }} title="Present">P</th>
-                            <th style={{ textAlign: 'center', color: 'var(--color-danger)', width: '40px' }} title="Absent">A</th>
+                            <th style={{ textAlign: 'center', color: 'var(--color-danger)', width: '60px' }} title="Absent">
+                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}>
+                                    A
+                                    <button
+                                        onClick={handleCopyTotalAbsences}
+                                        style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-danger)', padding: 0, display: 'flex', alignItems: 'center' }}
+                                        title="Copy all total absences"
+                                    >
+                                        <Copy size={14} />
+                                    </button>
+                                </div>
+                            </th>
                             <th style={{ textAlign: 'center', color: 'var(--color-warning)', width: '40px' }} title="Late">L</th>
                         </tr>
                     </thead>
