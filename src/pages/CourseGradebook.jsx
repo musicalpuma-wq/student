@@ -1028,24 +1028,6 @@ export function CourseGradebook() {
                                 return (
                                 <td key={act.id} style={{ textAlign: 'left', padding: '4px 6px' }}>
                                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '4px' }}>
-                                        {/* Progress Bar */}
-                                        <div style={{ 
-                                            width: '60px', 
-                                            height: '4px', 
-                                            background: '#f5f5f7', 
-                                            borderRadius: '2px',
-                                            overflow: 'hidden'
-                                        }}>
-                                            <div style={{ 
-                                                width: !isNaN(numGrade) ? `${(Math.min(numGrade, 5) / 5) * 100}%` : '0%',
-                                                height: '100%',
-                                                background: isGradient ? barColor : barColor,
-                                                backgroundImage: isGradient ? barColor : 'none',
-                                                borderRadius: '2px',
-                                                transition: 'width 0.3s ease, background 0.3s ease'
-                                            }} />
-                                        </div>
-
                                         <input 
                                             type="number" 
                                             step="0.1"
@@ -1061,7 +1043,11 @@ export function CourseGradebook() {
                                                 borderRadius: '6px',
                                                 fontSize: '0.95rem',
                                                 fontFamily: 'var(--font-family)',
-                                                color: act.locked ? 'black' : 'var(--color-text-primary)',
+                                                fontWeight: 600,
+                                                color: act.locked ? 'black' : (isGradient ? 'transparent' : barColor),
+                                                backgroundImage: (!act.locked && isGradient) ? barColor : 'none',
+                                                WebkitBackgroundClip: (!act.locked && isGradient) ? 'text' : 'border-box',
+                                                WebkitTextFillColor: (!act.locked && isGradient) ? 'transparent' : 'initial',
                                                 backgroundColor: act.locked ? '#f5f5f7' : 'transparent' // Ensure background provides contrast for black text
                                             }}
                                             className="no-spin"
