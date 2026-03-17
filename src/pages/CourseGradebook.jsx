@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { DataStore } from '../services/DataStore';
-import { Plus, Calendar, FileText, UserSquare2, ChevronLeft, Save, ArrowUpDown, Mail, GripVertical, Edit2, ArrowRight, Trash2, AlertTriangle, KeyRound, Lock, Unlock } from 'lucide-react';
+import { Plus, Calendar, FileText, UserSquare2, ChevronLeft, Save, ArrowUpDown, Mail, GripVertical, Edit2, ArrowRight, Trash2, AlertTriangle, KeyRound, Lock, Unlock, Copy } from 'lucide-react';
 import { GenericModal } from '../components/GenericModal';
 import { useSettings } from '../context/SettingsContext';
 
@@ -24,6 +24,7 @@ export function CourseGradebook() {
   const [isEditingCourseName, setIsEditingCourseName] = useState(false);
   const [newCourseName, setNewCourseName] = useState('');
   const [editingActivity, setEditingActivity] = useState(null);
+  const [focusedStudentId, setFocusedStudentId] = useState(null);
 
 
   
@@ -446,6 +447,24 @@ export function CourseGradebook() {
     const avg = calculateAverage(student);
     if (avg === '-') return true; 
     return parseFloat(avg) >= 3.0;
+  };
+
+  const handleCopyFinalGrades = () => {
+      const sortedStudents = getSortedStudents();
+      const textToCopy = sortedStudents.map(student => {
+          const avg = calculateAverage(student);
+          return avg === '-' ? '' : avg;
+      }).join('\n');
+      
+      navigator.clipboard.writeText(textToCopy).then(() => {
+          showModal({
+              type: 'alert',
+              title: 'Copied!',
+              message: 'Final grades have been copied to your clipboard.',
+              onConfirm: closeModal,
+              onCancel: closeModal
+          });
+      });
   };
 
   // --- Attendance Logic ---
@@ -917,13 +936,36 @@ export function CourseGradebook() {
                                 <Plus size={20} />
                             </button>
                         </th>
-                        <th style={{ width: '100px', textAlign: 'center', color: 'var(--color-text-primary)' }}>{t('finalGrade')}</th>
+                        <th style={{ width: '100px', textAlign: 'center', color: 'var(--color-text-primary)' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+                                {t('finalGrade')}
+                                <button
+                                    onClick={handleCopyFinalGrades}
+                                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-accent)', padding: 0, display: 'flex', alignItems: 'center' }}
+                                    title="Copy all final grades"
+                                >
+                                    <Copy size={16} />
+                                </button>
+                            </div>
+                        </th>
                     </tr>
                 </thead>
                 <tbody>
-                    {getSortedStudents().map((student, index) => (
+                    {getSortedStudents().map((student, index) => {
+                        const isFocused = student.id === focusedStudentId;
+                        const avgStr = calculateAverage(student);
+                        const avgNum = parseFloat(avgStr);
+                        let avgColor = 'var(--color-text-primary)';
+                        if (!isNaN(avgNum)) {
+                            if (avgNum < 3.0) avgColor = 'var(--color-danger)';
+                            else if (avgNum <= 3.9) avgColor = '#ff9f0a'; // Orange/Yellow
+                            else if (avgNum <= 4.5) avgColor = '#30d158'; // Light Green
+                            else avgColor = '#28a745'; // Darker Green
+                        }
+
+                        return (
                         <tr key={student.id}>
-                            <td style={{ textAlign: 'center', color: '#86868b', fontSize: '0.9rem' }}>{index + 1}</td>
+                            <td style={{ textAlign: 'center', color: '#86868b', fontSize: '0.9rem', padding: '4px' }}>{index + 1}</td>
                             <td style={{ fontSize: '0.9rem', color: 'var(--color-text-secondary)', padding: 0 }}>
                                 <input 
                                     className="input-field-transparent"
@@ -935,12 +977,18 @@ export function CourseGradebook() {
                                         background: 'transparent',
                                         fontSize: '0.9rem',
                                         color: 'var(--color-text-secondary)',
-                                        textAlign: 'center'
+                                        textAlign: 'center',
+                                        padding: '4px'
                                     }}
                                     placeholder="-"
                                 />
                             </td>
-                            <td style={{ fontWeight: 500 }}>{student.name}</td>
+                            <td style={{ 
+                                fontWeight: isFocused ? 'bold' : 500, 
+                                color: isFocused ? 'var(--color-accent)' : 'inherit',
+                                transition: 'color 0.2s',
+                                padding: '4px'
+                            }}>{student.name}</td>
                             {activities.map(act => {
                                 const grade = (student.grades || {})[act.id];
                                 const numGrade = parseFloat(grade);
@@ -957,8 +1005,14 @@ export function CourseGradebook() {
                                     }
                                 }
 
+                                const attendanceStatus = student.attendance?.[act.date];
+                                let borderBottomValue = '1px solid #d2d2d7'; // default
+                                if (attendanceStatus === 'present') borderBottomValue = '3px solid var(--color-success)';
+                                else if (attendanceStatus === 'absent') borderBottomValue = '3px solid var(--color-danger)';
+                                else if (attendanceStatus === 'late') borderBottomValue = '3px solid var(--color-warning)';
+
                                 return (
-                                <td key={act.id} style={{ textAlign: 'left', padding: '0.5rem', paddingLeft: '1rem' }}>
+                                <td key={act.id} style={{ textAlign: 'left', padding: '4px', paddingLeft: '1rem' }}>
                                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '4px' }}>
                                         {/* Progress Bar */}
                                         <div style={{ 
@@ -989,6 +1043,7 @@ export function CourseGradebook() {
                                                 textAlign: 'left', 
                                                 paddingLeft: '8px', 
                                                 border: '1px solid #d2d2d7', 
+                                                borderBottom: borderBottomValue,
                                                 borderRadius: '6px',
                                                 fontSize: '0.95rem',
                                                 fontFamily: 'var(--font-family)',
@@ -998,7 +1053,9 @@ export function CourseGradebook() {
                                             className="no-spin"
                                             value={grade || ''}
                                             onChange={(e) => handleGradeChange(student, act.id, e.target.value)}
+                                            onFocus={() => setFocusedStudentId(student.id)}
                                             onBlur={(e) => {
+                                                setFocusedStudentId(null);
                                                 const val = parseFloat(e.target.value);
                                                 if (!isNaN(val)) {
                                                     // Format to 1 decimal place if it's a valid number
@@ -1016,9 +1073,9 @@ export function CourseGradebook() {
                                 </td>
                             )})}
                             <td></td>
-                            <td style={{ textAlign: 'center', fontWeight: 700 }}>{calculateAverage(student)}</td>
+                            <td style={{ textAlign: 'center', fontWeight: 700, color: avgColor, padding: '4px' }}>{avgStr}</td>
                         </tr>
-                    ))}
+                    )})}
                     {students.length === 0 && (
                         <tr><td colSpan={activities.length + 3} style={{textAlign: 'center', padding: '2rem'}}>No students in this course.</td></tr>
                     )}

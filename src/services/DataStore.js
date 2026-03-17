@@ -261,7 +261,8 @@ export const DataStore = {
     if (!data.activities[course]) {
       data.activities[course] = [];
     }
-    const newActivity = { id: crypto.randomUUID(), name: activityName, locked: false };
+    const today = new Date().toISOString().split('T')[0];
+    const newActivity = { id: crypto.randomUUID(), name: activityName, date: today, locked: false };
     data.activities[course].push(newActivity);
     DataStore.save(data);
     return newActivity;
