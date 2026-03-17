@@ -251,7 +251,8 @@ export function CourseGradebook() {
         DataStore.updateActivity(courseId, {
             id: editingActivity.id,
             name: editingActivity.name,
-            date: editingActivity.date
+            date: editingActivity.date,
+            isAveraged: editingActivity.isAveraged
         });
         setEditingActivity(null);
         refreshData();
@@ -1507,16 +1508,34 @@ export function CourseGradebook() {
                             onChange={e => setEditingActivity({...editingActivity, date: e.target.value})}
                         />
                     </div>
-                    <div style={{ marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                         <input 
-                            type="checkbox"
-                            id="isAveragedToggle"
-                            checked={editingActivity.isAveraged !== false}
-                            onChange={e => setEditingActivity({...editingActivity, isAveraged: e.target.checked})}
-                            style={{ margin: 0, width: '16px', height: '16px', cursor: 'pointer' }}
-                        />
-                        <label htmlFor="isAveragedToggle" style={{ fontSize: '0.9rem', fontWeight: 500, cursor: 'pointer', margin: 0 }}>
-                            Promediado
+                    <div style={{ marginBottom: '1.5rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.8rem', background: '#f5f5f7', borderRadius: '8px' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column' }}>
+                            <span style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--color-text-primary)' }}>Promediar Actividad</span>
+                            <span style={{ fontSize: '0.75rem', color: 'var(--color-text-secondary)' }}>
+                                {editingActivity.isAveraged !== false ? "Esta nota afectará el promedio final." : "Solo registro (no altera el promedio)."}
+                            </span>
+                        </div>
+                        <label style={{ position: 'relative', display: 'inline-block', width: '44px', height: '24px', flexShrink: 0 }}>
+                            <input 
+                                type="checkbox"
+                                checked={editingActivity.isAveraged !== false}
+                                onChange={e => setEditingActivity({...editingActivity, isAveraged: e.target.checked})}
+                                style={{ opacity: 0, width: 0, height: 0, margin: 0, position: 'absolute' }}
+                            />
+                            <span style={{
+                                position: 'absolute', cursor: 'pointer',
+                                top: 0, left: 0, right: 0, bottom: 0,
+                                backgroundColor: editingActivity.isAveraged !== false ? 'var(--color-success)' : '#d2d2d7',
+                                transition: '.3s', borderRadius: '24px'
+                            }}>
+                                <span style={{
+                                    position: 'absolute',
+                                    height: '18px', width: '18px',
+                                    left: editingActivity.isAveraged !== false ? '23px' : '3px', bottom: '3px',
+                                    backgroundColor: 'white', transition: '.3s', borderRadius: '50%',
+                                    boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
+                                }} />
+                            </span>
                         </label>
                     </div>
                     <div style={{ display: 'flex', gap: '1rem', justifyContent: 'space-between' }}>
