@@ -437,10 +437,18 @@ export function CourseGradebook() {
   };
 
   const calculateAverage = (student) => {
-    const grades = Object.values(student.grades || {}).map(v => parseFloat(v)).filter(v => !isNaN(v));
-    if (grades.length === 0) return '-';
-    const sum = grades.reduce((a, b) => a + b, 0);
-    return (sum / grades.length).toFixed(1);
+    let sum = 0;
+    let count = 0;
+    activities.forEach(a => {
+        if (a.isAveraged === false) return; // Skip if explicitly not averaged
+        const val = parseFloat((student.grades || {})[a.id]);
+        if (!isNaN(val)) {
+            sum += val;
+            count++;
+        }
+    });
+    if (count === 0) return '-';
+    return (sum / count).toFixed(1);
   };
 
   const canStudentPass = (student) => {
@@ -859,13 +867,14 @@ export function CourseGradebook() {
                             <th 
                                 key={act.id} 
                                 style={{ 
-                                    minWidth: '150px', 
-                                    maxWidth: '200px', 
+                                    minWidth: '90px', 
+                                    maxWidth: '120px', 
                                     textAlign: 'left', 
                                     cursor: 'pointer', 
                                     transition: 'background 0.2s', 
                                     background: act.locked ? 'var(--color-bg-secondary)' : 'transparent',
-                                    paddingLeft: '1rem',
+                                    paddingLeft: '6px',
+                                    paddingRight: '6px',
                                     whiteSpace: 'nowrap',
                                     overflow: 'hidden',
                                     textOverflow: 'ellipsis'
@@ -903,10 +912,14 @@ export function CourseGradebook() {
                                                 color: 'var(--color-text-secondary)', 
                                                 fontWeight: 500, 
                                                 opacity: act.locked ? 0.7 : 1,
-                                                whiteSpace: 'nowrap'
+                                                whiteSpace: 'nowrap',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                gap: '4px'
                                             }}
                                         >
                                             {act.date || 'Set Date'}
+                                            {act.isAveraged === false && <span style={{ color: 'var(--color-warning)', fontWeight: 'bold' }} title="No promediado">!</span>}
                                         </div>
 
                                         {/* Name (Truncated) */}
@@ -1012,7 +1025,7 @@ export function CourseGradebook() {
                                 else if (attendanceStatus === 'late') borderBottomValue = '3px solid var(--color-warning)';
 
                                 return (
-                                <td key={act.id} style={{ textAlign: 'left', padding: '4px', paddingLeft: '1rem' }}>
+                                <td key={act.id} style={{ textAlign: 'left', padding: '4px 6px' }}>
                                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '4px' }}>
                                         {/* Progress Bar */}
                                         <div style={{ 
@@ -1493,6 +1506,18 @@ export function CourseGradebook() {
                             value={editingActivity.date || ''}
                             onChange={e => setEditingActivity({...editingActivity, date: e.target.value})}
                         />
+                    </div>
+                    <div style={{ marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                         <input 
+                            type="checkbox"
+                            id="isAveragedToggle"
+                            checked={editingActivity.isAveraged !== false}
+                            onChange={e => setEditingActivity({...editingActivity, isAveraged: e.target.checked})}
+                            style={{ margin: 0, width: '16px', height: '16px', cursor: 'pointer' }}
+                        />
+                        <label htmlFor="isAveragedToggle" style={{ fontSize: '0.9rem', fontWeight: 500, cursor: 'pointer', margin: 0 }}>
+                            Promediado
+                        </label>
                     </div>
                     <div style={{ display: 'flex', gap: '1rem', justifyContent: 'space-between' }}>
                          <button 
