@@ -143,7 +143,7 @@ export const PDFGenerator = {
   },
 
   // Generate Observer Annotations Report (Optimized for space)
-  generateObserverReport: (scope, studentScope) => {
+  generateObserverReport: (scope, studentScope, includeVPS = true) => {
     const doc = new jsPDF();
     const courses = scope === 'all' 
         ? DataStore.getCourses()
@@ -189,7 +189,8 @@ export const PDFGenerator = {
             // Student Name Header
             doc.setFontSize(12);
             doc.setFont('helvetica', 'bold');
-            doc.text(`${student.name} (VPS: ${student.vpsCode || '-'})`, 14, y);
+            const vpsText = includeVPS ? ` (VPS: ${student.vpsCode || '-'})` : '';
+            doc.text(`${student.name}${vpsText}`, 14, y);
             y += 6;
 
             doc.setFont('helvetica', 'normal');

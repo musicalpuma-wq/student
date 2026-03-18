@@ -10,6 +10,7 @@ export function Downloads() {
   const [reportType, setReportType] = useState('students'); // 'students' | 'grades' | 'observer'
   const [scope, setScope] = useState('all'); // 'all' | courseId
   const [studentScope, setStudentScope] = useState('all'); // 'all' | studentId
+  const [observerIncludeVPS, setObserverIncludeVPS] = useState(true);
   
   // Field Selector for Student Data
   const [selectedFields, setSelectedFields] = useState({
@@ -39,7 +40,7 @@ export function Downloads() {
       } else if (reportType === 'grades') {
           PDFGenerator.generateGradesReport(scope);
       } else if (reportType === 'observer') {
-          PDFGenerator.generateObserverReport(scope, studentScope);
+          PDFGenerator.generateObserverReport(scope, studentScope, observerIncludeVPS);
       }
   };
 
@@ -166,6 +167,19 @@ export function Downloads() {
                                 <option key={s.id} value={s.id}>{s.name} ({s.annotations.length})</option>
                             ))}
                         </select>
+                    </div>
+                )}
+                
+                {reportType === 'observer' && (
+                    <div style={{ marginTop: '1rem', marginLeft: '2rem' }}>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+                            <input 
+                                type="checkbox" 
+                                checked={observerIncludeVPS}
+                                onChange={(e) => setObserverIncludeVPS(e.target.checked)}
+                            />
+                            {t('includeFields') ? t('includeFields').replace(':', '') + ' VPS' : 'Include VPS'}
+                        </label>
                     </div>
                 )}
             </div>
