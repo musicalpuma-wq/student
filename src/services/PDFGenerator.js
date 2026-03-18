@@ -140,5 +140,95 @@ export const PDFGenerator = {
     });
 
     doc.save(`gradebook_${scope === 'all' ? 'all_courses' : scope}.pdf`);
+  },
+
+  // Generate Observer Annotations Report (Optimized for space)
+  generateObserverReport: (scope, studentScope) => {
+    const doc = new jsPDF();
+    const courses = scope === 'all' 
+        ? DataStore.getCourses()
+        : [scope];
+
+    let firstPage = true;
+
+    courses.forEach((courseId) => {
+        let students = DataStore.getStudentsByCourse(courseId)
+            .sort((a, b) => a.name.localeCompare(b.name));
+
+        if (studentScope && studentScope !== 'all') {
+            students = students.filter(s => s.id === studentScope);
+        }
+        
+        // Filter to only students with annotations
+        students = students.filter(s => s.annotations && s.annotations.length > 0);
+
+        if (students.length === 0) return; // Skip if no annotations
+
+        if (!firstPage) doc.addPage();
+        firstPage = false;
+
+        doc.setFontSize(16);
+        doc.setFont('helvetica', 'bold');
+        doc.text(`Observer Annotations - ${courseId}`, 14, 20);
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'normal');
+        doc.text(`Generated: ${new Date().toLocaleDateString()}`, 14, 26);
+        doc.setLineWidth(0.5);
+        doc.line(14, 28, 196, 28); // Horizontal divider
+
+        let y = 36;
+        const pageHeight = doc.internal.pageSize.height || doc.internal.pageSize.getHeight();
+
+        students.forEach(student => {
+            // Check if we need a new page for the student name header
+            if (y > pageHeight - 30) {
+                doc.addPage();
+                y = 20;
+            }
+
+            // Student Name Header
+            doc.setFontSize(12);
+            doc.setFont('helvetica', 'bold');
+            doc.text(`${student.name} (VPS: ${student.vpsCode || '-'})`, 14, y);
+            y += 6;
+
+            doc.setFont('helvetica', 'normal');
+            doc.setFontSize(10);
+
+            student.annotations.forEach(note => {
+                // Split text to fit width (196 - 20 margin = 176 max width)
+                const lines = doc.splitTextToSize(note, 170);
+                
+                // If this note block doesn't fit, add a new page
+                if (y + (lines.length * 5) > pageHeight - 15) {
+                    doc.addPage();
+                    y = 20;
+                }
+
+                doc.text('•', 14, y);
+                doc.text(lines, 20, y);
+                y += (lines.length * 5) + 2; // Move down dynamically based on lines
+            });
+            
+            y += 4; // Space after a student's block
+            
+            // Draw subtle line between students for clarity if not at end of page
+            if (y < pageHeight - 20) {
+                 doc.setDrawColor(200, 200, 200);
+                 doc.setLineWidth(0.2);
+                 doc.line(14, y - 2, 196, y - 2);
+                 doc.setDrawColor(0, 0, 0); // reset
+                 y += 4;
+            }
+        });
+    });
+
+    if (firstPage) {
+        // No annotations found for any course in scope
+        doc.setFontSize(12);
+        doc.text("No observer annotations found for the selected criteria.", 14, 20);
+    }
+
+    doc.save(`observer_report_${scope === 'all' ? 'all_courses' : scope}.pdf`);
   }
 };

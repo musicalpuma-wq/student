@@ -7,8 +7,9 @@ import { useSettings } from '../context/SettingsContext';
 export function Downloads() {
   const { t } = useSettings();
   const [courses, setCourses] = useState([]);
-  const [reportType, setReportType] = useState('students'); // 'students' | 'grades'
+  const [reportType, setReportType] = useState('students'); // 'students' | 'grades' | 'observer'
   const [scope, setScope] = useState('all'); // 'all' | courseId
+  const [studentScope, setStudentScope] = useState('all'); // 'all' | studentId
   
   // Field Selector for Student Data
   const [selectedFields, setSelectedFields] = useState({
@@ -27,11 +28,18 @@ export function Downloads() {
     setCourses(DataStore.getCourses());
   }, []);
 
+  useEffect(() => {
+    // Reset student filter when course changes
+    setStudentScope('all');
+  }, [scope]);
+
   const handleDownload = () => {
       if (reportType === 'students') {
           PDFGenerator.generateStudentDataReport(scope, selectedFields);
-      } else {
+      } else if (reportType === 'grades') {
           PDFGenerator.generateGradesReport(scope);
+      } else if (reportType === 'observer') {
+          PDFGenerator.generateObserverReport(scope, studentScope);
       }
   };
 
@@ -69,6 +77,17 @@ export function Downloads() {
                         style={{ width: '18px', height: '18px' }}
                     />
                     {t('reportGradebook')}
+                </label>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '1.1rem' }}>
+                    <input 
+                        type="radio" 
+                        name="reportType" 
+                        value="observer" 
+                        checked={reportType === 'observer'}
+                        onChange={() => setReportType('observer')}
+                        style={{ width: '18px', height: '18px' }}
+                    />
+                    {t('tabObserver') || 'Observer Annotations'}
                 </label>
             </div>
 
@@ -129,6 +148,26 @@ export function Downloads() {
                         </select>
                     </div>
                 </div>
+
+                {reportType === 'observer' && scope !== 'all' && (
+                    <div style={{ marginTop: '1rem', display: 'flex', alignItems: 'center', gap: '1rem', marginLeft: '2rem' }}>
+                        <span style={{ fontSize: '0.9rem', color: 'var(--color-text-secondary)' }}>Student:</span>
+                        <select 
+                            className="input-field" 
+                            style={{ padding: '4px 8px', minWidth: '200px' }}
+                            value={studentScope}
+                            onChange={(e) => setStudentScope(e.target.value)}
+                        >
+                            <option value="all">All Students with Annotations</option>
+                            {DataStore.getStudentsByCourse(scope)
+                                .sort((a, b) => a.name.localeCompare(b.name))
+                                .filter(s => s.annotations && s.annotations.length > 0)
+                                .map(s => (
+                                <option key={s.id} value={s.id}>{s.name} ({s.annotations.length})</option>
+                            ))}
+                        </select>
+                    </div>
+                )}
             </div>
 
             {/* Action */}
