@@ -458,6 +458,24 @@ export function CourseGradebook() {
     return parseFloat(avg) >= 3.0;
   };
 
+  const handleCopyActivityGrades = (activity) => {
+      const sortedStudents = getSortedStudents();
+      const textToCopy = sortedStudents.map(student => {
+          const grade = (student.grades || {})[activity.id];
+          return grade === undefined || grade === null || grade === '' ? '' : grade;
+      }).join('\n');
+      
+      navigator.clipboard.writeText(textToCopy).then(() => {
+          showModal({
+              type: 'alert',
+              title: 'Copied!',
+              message: `Grades for "${activity.name}" have been copied to your clipboard.`,
+              onConfirm: closeModal,
+              onCancel: closeModal
+          });
+      });
+  };
+
   const handleCopyFinalGrades = () => {
       const sortedStudents = getSortedStudents();
       const textToCopy = sortedStudents.map(student => {
@@ -905,8 +923,8 @@ export function CourseGradebook() {
                             >
                                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '4px', height: '100%', justifyContent: 'space-between' }}>
                                     
-                                    {/* Lock Icon - Left Aligned */}
-                                    <div style={{ display: 'flex', justifyContent: 'flex-start', width: '100%', marginBottom: '2px' }}>
+                                    {/* Lock and Copy Icons */}
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%', marginBottom: '2px' }}>
                                          <button 
                                             onClick={(e) => { e.stopPropagation(); handleToggleLockActivity(act); }}
                                             style={{ 
@@ -920,6 +938,20 @@ export function CourseGradebook() {
                                             title={act.locked ? "Locked (Click to Unlock)" : "Unlocked (Click to Lock)"}
                                         >
                                             {act.locked ? <Lock size={14} /> : <Unlock size={14} />}
+                                        </button>
+                                        <button 
+                                            onClick={(e) => { e.stopPropagation(); handleCopyActivityGrades(act); }}
+                                            style={{ 
+                                                background: 'none', 
+                                                border: 'none', 
+                                                cursor: 'pointer', 
+                                                color: 'var(--color-accent)',
+                                                padding: '2px',
+                                                display: 'flex', alignItems: 'center', justifyContent: 'center'
+                                            }}
+                                            title={`Copy grades for ${act.name}`}
+                                        >
+                                            <Copy size={14} />
                                         </button>
                                     </div>
                                     
