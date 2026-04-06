@@ -88,6 +88,32 @@ export function Sidebar() {
         <h2 style={{ fontSize: '1.2rem', margin: 0 }}>Academic<span style={{color: 'var(--color-accent)'}}>Flow</span></h2>
       </div>
 
+      <div style={{ marginBottom: '1.5rem' }}>
+          <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: 'var(--color-text-secondary)', marginBottom: '0.5rem' }}>
+              {t('period') || 'Periodo Activo'}
+          </label>
+          <select 
+              value={settings.currentPeriod}
+              onChange={(e) => updateSettings({ currentPeriod: e.target.value })}
+              style={{ 
+                  width: '100%', 
+                  padding: '0.6rem', 
+                  borderRadius: '8px', 
+                  border: '1px solid var(--color-border)',
+                  fontSize: '0.95rem',
+                  background: 'var(--color-bg-body)',
+                  color: 'var(--color-text-primary)',
+                  cursor: 'pointer',
+                  fontWeight: 500
+              }}
+          >
+              <option value="1">Periodo 1</option>
+              <option value="2">Periodo 2</option>
+              <option value="3">Periodo 3</option>
+              <option value="4">Periodo 4</option>
+          </select>
+      </div>
+
       <nav style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
         {navItems.map((item) => (
           <NavLink

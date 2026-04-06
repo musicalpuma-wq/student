@@ -43,7 +43,7 @@ export function Dashboard() {
       if (students.length === 0) return { avg: "0.0", failing: 0 };
 
       const studentAverages = students.map(s => {
-          const grades = Object.values(s.grades).map(v => parseFloat(v)).filter(v => !isNaN(v));
+          const grades = Object.values(s.grades?.[settings.currentPeriod] || {}).map(v => parseFloat(v)).filter(v => !isNaN(v));
           // If no grades, we treat as 0 or ignore? User said empty cells = 1.0 in Gradebook, 
           // but for general stats maybe we only count graded ones?
           // Let's stick to the logic used in Gradebook: empty/missing = 1.0 if we are strictly calculating course performance?

@@ -13,6 +13,7 @@ export function SettingsProvider({ children }) {
       language: 'es', // 'en' | 'es'
       themeMode: 'auto', // 'light' | 'dark' | 'auto'
       fontSize: 'medium', // 'small' | 'medium' | 'large'
+      currentPeriod: '1', // '1', '2', '3', '4'
     };
   });
 

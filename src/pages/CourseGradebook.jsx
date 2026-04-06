@@ -7,7 +7,7 @@ import { useSettings } from '../context/SettingsContext';
 
 export function CourseGradebook() {
   const { courseId } = useParams();
-  const { t } = useSettings();
+  const { t, currentPeriod } = useSettings();
   const [students, setStudents] = useState([]);
   const [activities, setActivities] = useState([]);
   const [materials, setMaterials] = useState([]); // [{id, name}]
@@ -56,10 +56,10 @@ export function CourseGradebook() {
     // Load data
     const loadedStudents = DataStore.getStudentsByCourse(courseId);
     setStudents(loadedStudents);
-    setActivities(DataStore.getActivities(courseId));
+    setActivities(DataStore.getActivities(courseId, currentPeriod));
     setStudents(loadedStudents);
-    setActivities(DataStore.getActivities(courseId));
-    setMaterials(DataStore.getMaterials(courseId));
+    setActivities(DataStore.getActivities(courseId, currentPeriod));
+    setMaterials(DataStore.getMaterials(courseId, currentPeriod));
     
     const details = DataStore.getCourseDetails(courseId);
     setCourseDirector(details.director || '');
@@ -72,7 +72,7 @@ export function CourseGradebook() {
     const today = new Date().toISOString().split('T')[0];
 
     const updatedStudents = loadedStudents.map(s => {
-        let annotations = [...(s.annotations || [])];
+        let annotations = [...(s.annotations?.[currentPeriod] || [])];
         let wasUpdated = false;
 
         // Check Email
@@ -93,7 +93,7 @@ export function CourseGradebook() {
 
         if (wasUpdated) {
              hasChanges = true;
-             const updatedS = { ...s, annotations };
+             const updatedS = { ...s, annotations: { ...(s.annotations || {}), [currentPeriod]: annotations } };
              DataStore.updateStudent(updatedS); // Update persistent store immediately
              return updatedS;
         }
@@ -104,7 +104,7 @@ export function CourseGradebook() {
         setStudents(updatedStudents); // Update local state if we added notes
     }
 
-  }, [courseId, refreshTrigger]);
+  }, [courseId, refreshTrigger, currentPeriod]);
 
   // Delete Course Timer Logic
   useEffect(() => {
@@ -165,7 +165,7 @@ export function CourseGradebook() {
   const handleUpdateMaterial = (e) => {
       e.preventDefault();
       if (editingMaterial) {
-          DataStore.updateMaterial(courseId, {
+          DataStore.updateMaterial(courseId, currentPeriod, {
               id: editingMaterial.id,
               name: editingMaterial.name,
               date: editingMaterial.date
@@ -177,7 +177,7 @@ export function CourseGradebook() {
 
   const handleDeleteMaterial = (material) => {
       requestSecurityCheck(`delete material column "${material.name}"`, () => {
-           DataStore.deleteMaterial(courseId, material.id);
+           DataStore.deleteMaterial(courseId, currentPeriod, material.id);
            setEditingMaterial(null);
            refreshData();
       });
@@ -217,8 +217,8 @@ export function CourseGradebook() {
          }
       } else {
         // Sorting by grade (activity ID)
-        valA = parseFloat((a.grades || {})[sortConfig.key]) || -1; // Treat no grade as lowest
-        valB = parseFloat((b.grades || {})[sortConfig.key]) || -1;
+        valA = parseFloat((a.grades?.[currentPeriod] || {})[sortConfig.key]) || -1; // Treat no grade as lowest
+        valB = parseFloat((b.grades?.[currentPeriod] || {})[sortConfig.key]) || -1;
       }
 
       if (valA < valB) return sortConfig.direction === 'asc' ? -1 : 1;
@@ -236,7 +236,7 @@ export function CourseGradebook() {
         inputPlaceholder: t('enterActivityName'),
         onConfirm: (name) => {
             if (name) {
-                DataStore.addActivity(courseId, name);
+                DataStore.addActivity(courseId, currentPeriod, name);
                 refreshData();
                 closeModal();
             }
@@ -248,7 +248,7 @@ export function CourseGradebook() {
   const handleUpdateActivity = (e) => {
     e.preventDefault();
     if (editingActivity) {
-        DataStore.updateActivity(courseId, {
+        DataStore.updateActivity(courseId, currentPeriod, {
             id: editingActivity.id,
             name: editingActivity.name,
             date: editingActivity.date,
@@ -267,7 +267,7 @@ export function CourseGradebook() {
              const dateStr = newObservation.date || new Date().toISOString().split('T')[0];
              const newAnnotation = `[${dateStr}] ${newObservation.note}`;
              
-             let updatedAnnotations = [...(student.annotations || [])];
+             let updatedAnnotations = [...(student.annotations?.[currentPeriod] || [])];
              
              if (newObservation.index !== undefined && newObservation.index !== null) {
                  // Edit existing
@@ -279,7 +279,7 @@ export function CourseGradebook() {
 
              const updatedStudent = { 
                   ...student, 
-                  annotations: updatedAnnotations
+                  annotations: { ...(student.annotations || {}), [currentPeriod]: updatedAnnotations }
               };
               DataStore.updateStudent(updatedStudent);
               // Update local state
@@ -290,7 +290,7 @@ export function CourseGradebook() {
   };
 
   const handleEditObservation = (student, index) => {
-      const obsString = student.annotations[index];
+      const obsString = (student.annotations?.[currentPeriod] || [])[index];
       const parsed = parseObservation(obsString);
       setNewObservation({
           studentId: student.id,
@@ -303,10 +303,10 @@ export function CourseGradebook() {
 
   const handleDeleteObservation = (student, index) => {
       const deleteObs = () => {
-          const updatedAnnotations = student.annotations.filter((_, i) => i !== index);
+          const updatedAnnotations = (student.annotations?.[currentPeriod] || []).filter((_, i) => i !== index);
           const updatedStudent = { 
               ...student, 
-              annotations: updatedAnnotations 
+              annotations: { ...(student.annotations || {}), [currentPeriod]: updatedAnnotations } 
           };
           DataStore.updateStudent(updatedStudent);
           setStudents(prev => prev.map(s => s.id === student.id ? updatedStudent : s));
@@ -402,7 +402,7 @@ export function CourseGradebook() {
         inputPlaceholder: t('materialName'),
         onConfirm: (name) => {
             if (name) {
-                DataStore.addMaterialColumn(courseId, name);
+                DataStore.addMaterialColumn(courseId, currentPeriod, name);
                 refreshData();
                 closeModal();
             }
@@ -414,7 +414,7 @@ export function CourseGradebook() {
   const handleMaterialValueChange = (student, materialId, value) => {
       const updatedStudent = { 
           ...student, 
-          materials: { ...(student.materials || {}), [materialId]: value } 
+          materials: { ...(student.materials || {}), [currentPeriod]: { ...(student.materials?.[currentPeriod] || {}), [materialId]: value } } 
       };
       DataStore.updateStudent(updatedStudent);
       setStudents(prev => prev.map(s => s.id === student.id ? updatedStudent : s));
@@ -430,7 +430,7 @@ export function CourseGradebook() {
 
   const handleGradeChange = (student, activityId, value) => {
     // Clone student to update state immediately for UI responsiveness
-    const updatedStudent = { ...student, grades: { ...student.grades, [activityId]: value } };
+    const updatedStudent = { ...student, grades: { ...(student.grades || {}), [currentPeriod]: { ...(student.grades?.[currentPeriod] || {}), [activityId]: value } } };
     DataStore.updateStudent(updatedStudent);
     // No full refresh needed if we update local state, but for simplicity we can refresh or just mutate local list
     // Ideally we update the local `students` state to match
@@ -442,7 +442,7 @@ export function CourseGradebook() {
     let count = 0;
     activities.forEach(a => {
         if (a.isAveraged === false) return; // Skip if explicitly not averaged
-        const val = parseFloat((student.grades || {})[a.id]);
+        const val = parseFloat((student.grades?.[currentPeriod] || {})[a.id]);
         if (!isNaN(val)) {
             sum += val;
             count++;
@@ -461,7 +461,7 @@ export function CourseGradebook() {
   const handleCopyActivityGrades = (activity) => {
       const sortedStudents = getSortedStudents();
       const textToCopy = sortedStudents.map(student => {
-          const grade = (student.grades || {})[activity.id];
+          const grade = (student.grades?.[currentPeriod] || {})[activity.id];
           return grade === undefined || grade === null || grade === '' ? '' : grade;
       }).join('\n');
       
@@ -498,7 +498,7 @@ export function CourseGradebook() {
       const sortedStudents = getSortedStudents();
       const textToCopy = sortedStudents.map(student => {
           let absents = 0;
-          Object.values(student.attendance || {}).forEach(status => {
+          Object.values(student.attendance?.[currentPeriod] || {}).forEach(status => {
               if (status === 'absent') absents++;
           });
           return absents;
@@ -517,19 +517,20 @@ export function CourseGradebook() {
 
   // --- Attendance Logic ---
   const toggleAttendance = (student, date) => {
-    const currentStatus = student.attendance?.[date]; // undefined if not set
+    const currentStatus = student.attendance?.[currentPeriod]?.[date]; // undefined if not set
     // Cycle: undefined -> present -> absent -> late -> undefined
     let nextStatus = 'present';
     if (currentStatus === 'present') nextStatus = 'absent';
     else if (currentStatus === 'absent') nextStatus = 'late';
     else if (currentStatus === 'late') nextStatus = undefined;
     
-    const updatedStudent = { ...student, attendance: { ...student.attendance } };
+    const periodAttendance = { ...(student.attendance?.[currentPeriod] || {}) };
+    const updatedStudent = { ...student, attendance: { ...(student.attendance || {}), [currentPeriod]: periodAttendance } };
     
     if (nextStatus) {
-        updatedStudent.attendance[date] = nextStatus;
+        updatedStudent.attendance[currentPeriod][date] = nextStatus;
     } else {
-        delete updatedStudent.attendance[date];
+        delete updatedStudent.attendance[currentPeriod][date];
     }
 
     DataStore.updateStudent(updatedStudent);
@@ -600,7 +601,7 @@ export function CourseGradebook() {
 
   const handleDeleteActivity = (activity) => {
       requestSecurityCheck(`delete activity "${activity.name}"`, () => {
-           DataStore.deleteActivity(courseId, activity.id);
+           DataStore.deleteActivity(courseId, currentPeriod, activity.id);
            setEditingActivity(null);
            refreshData();
       });
@@ -608,7 +609,7 @@ export function CourseGradebook() {
 
   const handleDeleteAttendance = (date) => {
       requestSecurityCheck(`delete attendance for ${date}`, () => {
-           DataStore.deleteAttendanceColumn(courseId, date);
+           DataStore.deleteAttendanceColumn(courseId, currentPeriod, date);
            refreshData(); // Force refresh to update students list from store
            // Note: DataStore.deleteAttendanceColumn updates local storage, refreshData triggers re-read via useEffect
       });
@@ -618,7 +619,7 @@ export function CourseGradebook() {
       if (activity.locked) {
           // Unlock -> Require Security
           requestSecurityCheck(`unlock activity "${activity.name}"`, () => {
-               DataStore.updateActivity(courseId, { ...activity, locked: false });
+               DataStore.updateActivity(courseId, currentPeriod, { ...activity, locked: false });
                refreshData();
           });
       } else {
@@ -628,7 +629,7 @@ export function CourseGradebook() {
               title: 'Lock Activity?',
               message: `Are you sure you want to lock "${activity.name}"? Grades will become read-only.`,
               onConfirm: () => {
-                   DataStore.updateActivity(courseId, { ...activity, locked: true });
+                   DataStore.updateActivity(courseId, currentPeriod, { ...activity, locked: true });
                    refreshData();
                    closeModal();
               },
@@ -752,7 +753,7 @@ export function CourseGradebook() {
               const totalStudents = studentsList.length;
               
               // Total Observations
-              const totalObs = studentsList.reduce((acc, s) => acc + (s.annotations ? s.annotations.length : 0), 0);
+              const totalObs = studentsList.reduce((acc, s) => acc + (s.annotations?.[currentPeriod] ? s.annotations[currentPeriod].length : 0), 0);
               
               // Graded Activities
               const totalActivities = activities.length;
@@ -767,7 +768,7 @@ export function CourseGradebook() {
               
               studentsList.forEach(s => {
                   activities.forEach(a => {
-                      const g = (s.grades || {})[a.id];
+                      const g = (s.grades?.[currentPeriod] || {})[a.id];
                       // Check if empty
                       if (g !== undefined && g !== null && g !== '') {
                           actualGradesCount++;
@@ -1057,7 +1058,7 @@ export function CourseGradebook() {
                                 padding: '4px'
                             }}>{student.name}</td>
                             {activities.map(act => {
-                                const grade = (student.grades || {})[act.id];
+                                const grade = (student.grades?.[currentPeriod] || {})[act.id];
                                 const numGrade = parseFloat(grade);
                                 let barColor = '#e5e5ea';
                                 let isGradient = false;
@@ -1072,7 +1073,7 @@ export function CourseGradebook() {
                                     }
                                 }
 
-                                const attendanceStatus = student.attendance?.[act.date];
+                                const attendanceStatus = student.attendance?.[currentPeriod]?.[act.date];
                                 let borderBottomValue = '1px solid #d2d2d7'; // default
                                 if (attendanceStatus === 'present') borderBottomValue = '3px solid var(--color-success)';
                                 else if (attendanceStatus === 'absent') borderBottomValue = '3px solid var(--color-danger)';
@@ -1171,7 +1172,7 @@ export function CourseGradebook() {
                                 </div>
                             </th>
                             {/* Derive dates from all students' attendance records */}
-                            {Array.from(new Set(students.flatMap(s => Object.keys(s.attendance || {})))).sort().map(date => (
+                            {Array.from(new Set(students.flatMap(s => Object.keys(s.attendance?.[currentPeriod] || {})))).sort().map(date => (
                                 <th key={date} style={{ textAlign: 'center', minWidth: '80px' }}>
                                     <div style={{ fontSize: '0.8rem', color: 'var(--color-text-primary)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
                                         {date.split('-').slice(1).join('/')}
@@ -1213,10 +1214,10 @@ export function CourseGradebook() {
                     <tbody>
 
                          {getSortedStudents().map((student, index) => {
-                            const dates = Array.from(new Set(students.flatMap(s => Object.keys(s.attendance || {})))).sort();
+                            const dates = Array.from(new Set(students.flatMap(s => Object.keys(s.attendance?.[currentPeriod] || {})))).sort();
                             // Calculate totals
                             const counts = { present: 0, absent: 0, late: 0 };
-                            Object.values(student.attendance || {}).forEach(status => {
+                            Object.values(student.attendance?.[currentPeriod] || {}).forEach(status => {
                                 if (counts[status] !== undefined) counts[status]++;
                             });
 
@@ -1241,7 +1242,7 @@ export function CourseGradebook() {
                                    </td>
                                    <td style={{ fontWeight: 500 }}>{student.name}</td>
                                    {dates.map(date => {
-                                       const status = student.attendance?.[date]; // No default 'present', allow undefined
+                                       const status = student.attendance?.[currentPeriod]?.[date]; // No default 'present', allow undefined
                                        
                                        const dotColor = status === 'present' ? 'var(--color-success)' : status === 'absent' ? 'var(--color-danger)' : status === 'late' ? 'var(--color-warning)' : 'white';
                                        
@@ -1340,7 +1341,7 @@ export function CourseGradebook() {
                                         className="input-field"
                                         style={{ width: '18rem', fontSize: '0.9rem' }}
                                         placeholder={t('assign') || "Assign..."}
-                                        value={student.materials?.[mat.id] || ''}
+                                        value={student.materials?.[currentPeriod]?.[mat.id] || ''}
                                         onChange={(e) => handleMaterialValueChange(student, mat.id, e.target.value)}
                                     />
                                 </td>
@@ -1386,9 +1387,9 @@ export function CourseGradebook() {
                                 </div>
                             </td>
                             <td>
-                                {student.annotations && student.annotations.length > 0 ? (
+                                {student.annotations?.[currentPeriod] && student.annotations[currentPeriod].length > 0 ? (
                                     <ul style={{ paddingLeft: '1.2rem', margin: 0 }}>
-                                        {student.annotations.map((note, i) => (
+                                        {student.annotations[currentPeriod].map((note, i) => (
                                             <li key={i} style={{ marginBottom: '0.5rem', fontSize: '0.9rem' }}>
                                                 <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '10px' }}>
                                                     <span>{note}</span>
@@ -1680,7 +1681,7 @@ export function CourseGradebook() {
                              const s = students[0];
                              // Check if date already exists to avoid overwriting blindly (though overwrite with 'present' is mostly harmless for reset, let's just ensure we set it)
                              // Logic: Set first student to 'present' to initialize the column.
-                             const updated = { ...s, attendance: { ...s.attendance, [newAttendanceDate]: 'present' } };
+                             const updated = { ...s, attendance: { ...(s.attendance || {}), [currentPeriod]: { ...(s.attendance?.[currentPeriod] || {}), [newAttendanceDate]: 'present' } } };
                              DataStore.updateStudent(updated);
                              refreshData();
                              setShowAddDateModal(false);

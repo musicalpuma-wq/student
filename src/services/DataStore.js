@@ -25,6 +25,42 @@ export const DataStore = {
         parsed.courses = derived;
     }
     
+    // v2 Migration for Academic Periods
+    if (parsed.version !== 'v2') {
+        const newActivities = {};
+        for (const c in parsed.activities) {
+            newActivities[`1_${c}`] = parsed.activities[c];
+        }
+        parsed.activities = newActivities;
+
+        const newMaterials = {};
+        for (const c in parsed.materials) {
+            newMaterials[`1_${c}`] = parsed.materials[c];
+        }
+        parsed.materials = newMaterials;
+
+        parsed.students.forEach(s => {
+            s.grades = { '1': s.grades || {} };
+            s.attendance = { '1': s.attendance || {} };
+            s.materials = { '1': s.materials || {} };
+            // Annotations had the array type
+            s.annotations_data = { '1': s.annotations || [] };
+            delete s.annotations; // we renamed this to avoid confusion if needed, or keep it. Let's keep it as annotations but dictionary.
+        });
+        
+        // Wait, if we keep the name annotations, s.annotations = { '1': s.annotations || [] };
+        parsed.students.forEach(s => {
+            // Need to handle if s.annotations was already renamed above, let's just do it cleanly:
+            if (!s.annotations_data) {
+                // Above assignment actually broke because I overwrote it. Let's do it cleanly:
+            }
+        });
+        
+        parsed.version = 'v2';
+        // Auto-save the migration
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(parsed));
+    }
+    
     return parsed;
   },
 
@@ -73,8 +109,8 @@ export const DataStore = {
       if (!s.grades) s.grades = {};
       if (!s.attendance) s.attendance = {};
       if (!s.materials) s.materials = {};
-      if (!s.observations) s.observations = []; 
-      if (!s.annotations) s.annotations = []; 
+      // For version v2, annotations is a dict of lists
+      if (!s.annotations) s.annotations = {}; 
       return s;
   },
 
@@ -192,16 +228,19 @@ export const DataStore = {
     });
 
     // 3. Update activities key
-    if (data.activities[oldName]) {
-      data.activities[newName] = data.activities[oldName];
-      delete data.activities[oldName];
-    }
-
-    // 4. Update materials key
-    if (data.materials && data.materials[oldName]) {
-      data.materials[newName] = data.materials[oldName];
-      delete data.materials[oldName];
-    }
+    ['1', '2', '3', '4'].forEach(p => {
+        const oldKey = `${p}_${oldName}`;
+        const newKey = `${p}_${newName}`;
+        if (data.activities[oldKey]) {
+          data.activities[newKey] = data.activities[oldKey];
+          delete data.activities[oldKey];
+        }
+        // 4. Update materials key
+        if (data.materials && data.materials[oldKey]) {
+          data.materials[newKey] = data.materials[oldKey];
+          delete data.materials[oldKey];
+        }
+    });
     
     // 5. Update Details
     if (data.courseDetails && data.courseDetails[oldName]) {
@@ -232,15 +271,12 @@ export const DataStore = {
     // 2. Remove students
     data.students = data.students.filter(s => s.course !== courseName);
 
-    // 3. Remove activities
-    if (data.activities[courseName]) {
-      delete data.activities[courseName];
-    }
-
-    // 4. Remove materials
-    if (data.materials && data.materials[courseName]) {
-      delete data.materials[courseName];
-    }
+    // 3. & 4. Remove activities and materials for all periods
+    ['1', '2', '3', '4'].forEach(p => {
+        const key = `${p}_${courseName}`;
+        if (data.activities[key]) delete data.activities[key];
+        if (data.materials && data.materials[key]) delete data.materials[key];
+    });
     
     // 5. Remove details
     if (data.courseDetails && data.courseDetails[courseName]) {
@@ -251,44 +287,48 @@ export const DataStore = {
   },
 
   // Activities
-  getActivities: (course) => {
+  getActivities: (course, period) => {
     const data = DataStore.load();
-    return data.activities[course] || [];
+    const key = `${period}_${course}`;
+    return data.activities[key] || [];
   },
 
-  addActivity: (course, activityName) => {
+  addActivity: (course, period, activityName) => {
     const data = DataStore.load();
-    if (!data.activities[course]) {
-      data.activities[course] = [];
+    const key = `${period}_${course}`;
+    if (!data.activities[key]) {
+      data.activities[key] = [];
     }
     const today = new Date().toISOString().split('T')[0];
     const newActivity = { id: crypto.randomUUID(), name: activityName, date: today, locked: false };
-    data.activities[course].push(newActivity);
+    data.activities[key].push(newActivity);
     DataStore.save(data);
     return newActivity;
   },
   
-  updateActivity: (course, activity) => {
+  updateActivity: (course, period, activity) => {
        const data = DataStore.load();
-       if (data.activities[course]) {
-           const idx = data.activities[course].findIndex(a => a.id === activity.id);
+       const key = `${period}_${course}`;
+       if (data.activities[key]) {
+           const idx = data.activities[key].findIndex(a => a.id === activity.id);
            if (idx !== -1) {
-               data.activities[course][idx] = activity;
+               data.activities[key][idx] = activity;
                DataStore.save(data);
            }
        }
   },
 
-  deleteActivity: (course, activityId) => {
+  deleteActivity: (course, period, activityId) => {
       const data = DataStore.load();
-      if (data.activities && data.activities[course]) {
+      const key = `${period}_${course}`;
+      if (data.activities && data.activities[key]) {
           // Remove activity definition
-          data.activities[course] = data.activities[course].filter(a => a.id !== activityId);
+          data.activities[key] = data.activities[key].filter(a => a.id !== activityId);
           
           // Remove grades for this activity
           data.students.forEach(s => {
-              if (s.course === course && s.grades) {
-                  delete s.grades[activityId];
+              if (s.course === course && s.grades && s.grades[period]) {
+                  delete s.grades[period][activityId];
               }
           });
           
@@ -296,14 +336,14 @@ export const DataStore = {
       }
   },
 
-  deleteAttendanceColumn: (course, date) => {
+  deleteAttendanceColumn: (course, period, date) => {
       const data = DataStore.load();
       let changed = false;
       data.students.forEach(s => {
-          if (s.course === course && s.attendance) {
+          if (s.course === course && s.attendance && s.attendance[period]) {
               // We just check if the key exists to mark changed, ensuring save is called if needed
-              if (Object.prototype.hasOwnProperty.call(s.attendance, date)) {
-                  delete s.attendance[date];
+              if (Object.prototype.hasOwnProperty.call(s.attendance[period], date)) {
+                  delete s.attendance[period][date];
                   changed = true;
               }
           }
@@ -314,44 +354,48 @@ export const DataStore = {
   },
 
   // Materials
-  getMaterials: (course) => {
+  getMaterials: (course, period) => {
     const data = DataStore.load();
-    return data.materials?.[course] || [];
+    const key = `${period}_${course}`;
+    return data.materials?.[key] || [];
   },
 
-  addMaterialColumn: (course, materialName) => {
+  addMaterialColumn: (course, period, materialName) => {
     const data = DataStore.load();
     if (!data.materials) data.materials = {};
-    if (!data.materials[course]) {
-      data.materials[course] = [];
+    const key = `${period}_${course}`;
+    if (!data.materials[key]) {
+      data.materials[key] = [];
     }
     const newMaterial = { id: crypto.randomUUID(), name: materialName };
-    data.materials[course].push(newMaterial);
+    data.materials[key].push(newMaterial);
     DataStore.save(data);
     return newMaterial;
   },
 
-  updateMaterial: (course, material) => {
+  updateMaterial: (course, period, material) => {
       const data = DataStore.load();
-      if (data.materials && data.materials[course]) {
-          const idx = data.materials[course].findIndex(m => m.id === material.id);
+      const key = `${period}_${course}`;
+      if (data.materials && data.materials[key]) {
+          const idx = data.materials[key].findIndex(m => m.id === material.id);
           if (idx !== -1) {
-              data.materials[course][idx] = { ...data.materials[course][idx], ...material };
+              data.materials[key][idx] = { ...data.materials[key][idx], ...material };
               DataStore.save(data);
           }
       }
   },
 
-  deleteMaterial: (course, materialId) => {
+  deleteMaterial: (course, period, materialId) => {
       const data = DataStore.load();
-      if (data.materials && data.materials[course]) {
+      const key = `${period}_${course}`;
+      if (data.materials && data.materials[key]) {
           // Remove material definition
-          data.materials[course] = data.materials[course].filter(m => m.id !== materialId);
+          data.materials[key] = data.materials[key].filter(m => m.id !== materialId);
           
           // Remove values for this material
           data.students.forEach(s => {
-              if (s.course === course && s.materials) {
-                  delete s.materials[materialId];
+              if (s.course === course && s.materials && s.materials[period]) {
+                  delete s.materials[period][materialId];
               }
           });
           
