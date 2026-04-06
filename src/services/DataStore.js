@@ -40,19 +40,36 @@ export const DataStore = {
         parsed.materials = newMaterials;
 
         parsed.students.forEach(s => {
-            s.grades = { '1': s.grades || {} };
-            s.attendance = { '1': s.attendance || {} };
-            s.materials = { '1': s.materials || {} };
+            if (!s.grades || !s.grades['1'] && typeof s.grades === 'object') {
+                if (Object.keys(s.grades || {}).some(k => ['1','2','3','4'].includes(k))) {
+                     // already nested somehow
+                } else {
+                    s.grades = { '1': s.grades || {} };
+                }
+            }
+            if (!s.attendance || !s.attendance['1'] && typeof s.attendance === 'object') {
+                if (Object.keys(s.attendance || {}).some(k => ['1','2','3','4'].includes(k))) {
+                     // already nested
+                } else {
+                    s.attendance = { '1': s.attendance || {} };
+                }
+            }
+            if (!s.materials || !s.materials['1'] && typeof s.materials === 'object') {
+                 if (Object.keys(s.materials || {}).some(k => ['1','2','3','4'].includes(k))) {
+                     // already nested
+                 } else {
+                     s.materials = { '1': s.materials || {} };
+                 }
+            }
+            
             // Annotations had the array type
-            s.annotations_data = { '1': s.annotations || [] };
-            delete s.annotations; // we renamed this to avoid confusion if needed, or keep it. Let's keep it as annotations but dictionary.
-        });
-        
-        // Wait, if we keep the name annotations, s.annotations = { '1': s.annotations || [] };
-        parsed.students.forEach(s => {
-            // Need to handle if s.annotations was already renamed above, let's just do it cleanly:
-            if (!s.annotations_data) {
-                // Above assignment actually broke because I overwrote it. Let's do it cleanly:
+            const oldAnnotations = s.annotations || [];
+            if (s.annotations_data && s.annotations_data['1']) {
+                // Keep if already migrated somewhat
+                s.annotations = s.annotations_data;
+                delete s.annotations_data;
+            } else if (Array.isArray(oldAnnotations)) {
+                s.annotations = { '1': oldAnnotations };
             }
         });
         
