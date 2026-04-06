@@ -7,7 +7,7 @@ import { useGlobalModal } from '../context/GlobalModalContext';
 import { useRef } from 'react';
 
 export function Sidebar() {
-  const { settings, t } = useSettings();
+  const { settings, t, updateSettings } = useSettings();
   const { showAlert, showConfirm } = useGlobalModal();
   const [showSettings, setShowSettings] = useState(false);
   const fileInputRef = useRef(null);
