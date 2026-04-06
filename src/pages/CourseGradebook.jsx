@@ -7,7 +7,7 @@ import { useSettings } from '../context/SettingsContext';
 
 export function CourseGradebook() {
   const { courseId } = useParams();
-  const { t, currentPeriod } = useSettings();
+  const { t, settings: { currentPeriod = '1' } = {} } = useSettings();
   const [students, setStudents] = useState([]);
   const [activities, setActivities] = useState([]);
   const [materials, setMaterials] = useState([]); // [{id, name}]
