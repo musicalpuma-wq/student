@@ -14,67 +14,76 @@ export const DataStore = {
     const data = localStorage.getItem(STORAGE_KEY);
     let parsed = data ? JSON.parse(data) : initialData;
     
-    // Migration for existing data without materials
+    // Basic field defaults
     if (!parsed.materials) parsed.materials = {};
     if (!parsed.courseDetails) parsed.courseDetails = {};
-    
-    // Migration for explicit courses
     if (!parsed.courses) {
-        // Derive from students if missing
         const derived = [...new Set(parsed.students.map(s => s.course))].sort();
         parsed.courses = derived;
     }
     
     // v2 Migration for Academic Periods
+    // This runs when the backup is in flat (pre-v2) format.
+    // All data gets nested under period '1'.
     if (parsed.version !== 'v2') {
+        // Migrate activities: { 'courseId': [...] } -> { '1_courseId': [...] }
         const newActivities = {};
         for (const c in parsed.activities) {
-            newActivities[`1_${c}`] = parsed.activities[c];
+            // Only migrate keys that don't already have period prefix
+            if (!c.match(/^[1-4]_/)) {
+                newActivities[`1_${c}`] = parsed.activities[c];
+            } else {
+                newActivities[c] = parsed.activities[c];
+            }
         }
         parsed.activities = newActivities;
 
+        // Migrate materials similarly
         const newMaterials = {};
         for (const c in parsed.materials) {
-            newMaterials[`1_${c}`] = parsed.materials[c];
+            if (!c.match(/^[1-4]_/)) {
+                newMaterials[`1_${c}`] = parsed.materials[c];
+            } else {
+                newMaterials[c] = parsed.materials[c];
+            }
         }
         parsed.materials = newMaterials;
 
+        // Migrate student-level data
         parsed.students.forEach(s => {
-            if (!s.grades || !s.grades['1'] && typeof s.grades === 'object') {
-                if (Object.keys(s.grades || {}).some(k => ['1','2','3','4'].includes(k))) {
-                     // already nested somehow
-                } else {
-                    s.grades = { '1': s.grades || {} };
-                }
+            // Grades: flat object of {activityId: grade} -> {'1': {activityId: grade}}
+            // Only migrate if grades is NOT already period-scoped
+            const gradeKeys = Object.keys(s.grades || {});
+            const isGradesAlreadyScoped = gradeKeys.length > 0 && gradeKeys.every(k => ['1','2','3','4'].includes(k));
+            if (!isGradesAlreadyScoped) {
+                s.grades = { '1': s.grades || {} };
             }
-            if (!s.attendance || !s.attendance['1'] && typeof s.attendance === 'object') {
-                if (Object.keys(s.attendance || {}).some(k => ['1','2','3','4'].includes(k))) {
-                     // already nested
-                } else {
-                    s.attendance = { '1': s.attendance || {} };
-                }
+
+            // Attendance: same pattern
+            const attendanceKeys = Object.keys(s.attendance || {});
+            const isAttendanceAlreadyScoped = attendanceKeys.length > 0 && attendanceKeys.every(k => ['1','2','3','4'].includes(k));
+            if (!isAttendanceAlreadyScoped) {
+                s.attendance = { '1': s.attendance || {} };
             }
-            if (!s.materials || !s.materials['1'] && typeof s.materials === 'object') {
-                 if (Object.keys(s.materials || {}).some(k => ['1','2','3','4'].includes(k))) {
-                     // already nested
-                 } else {
-                     s.materials = { '1': s.materials || {} };
-                 }
+
+            // Materials: same pattern
+            const materialKeys = Object.keys(s.materials || {});
+            const isMaterialsAlreadyScoped = materialKeys.length > 0 && materialKeys.every(k => ['1','2','3','4'].includes(k));
+            if (!isMaterialsAlreadyScoped) {
+                s.materials = { '1': s.materials || {} };
             }
             
-            // Annotations had the array type
-            const oldAnnotations = s.annotations || [];
-            if (s.annotations_data && s.annotations_data['1']) {
-                // Keep if already migrated somewhat
-                s.annotations = s.annotations_data;
-                delete s.annotations_data;
-            } else if (Array.isArray(oldAnnotations)) {
-                s.annotations = { '1': oldAnnotations };
+            // Annotations: was an array, now a dict of period -> array
+            if (Array.isArray(s.annotations)) {
+                s.annotations = { '1': s.annotations };
+            } else if (!s.annotations || typeof s.annotations !== 'object') {
+                s.annotations = { '1': [] };
             }
+            // If it's already a non-array object, assume it's already period-scoped
         });
         
         parsed.version = 'v2';
-        // Auto-save the migration
+        // Auto-save the migrated data
         localStorage.setItem(STORAGE_KEY, JSON.stringify(parsed));
     }
     

@@ -42,7 +42,11 @@ export function Sidebar() {
         const json = JSON.parse(e.target.result);
         // Basic validation
         if (json.students && json.activities) {
+          // Store backup data (migration will run on next load)
           localStorage.setItem('sms_data_v1', JSON.stringify(json));
+          // Reset period to 1 so user always lands on Period 1 after restore
+          const currentSettings = JSON.parse(localStorage.getItem('sms_settings') || '{}');
+          localStorage.setItem('sms_settings', JSON.stringify({ ...currentSettings, currentPeriod: '1' }));
           showAlert(t('backupRestore'), t('backupSuccess'), () => window.location.reload());
         } else {
           showAlert(t('backupRestore'), 'Invalid backup file format.');
@@ -55,6 +59,7 @@ export function Sidebar() {
     // Reset value to allow re-uploading same file if failed
     event.target.value = ''; 
   };
+
 
   const initiateRestore = () => {
       showConfirm(
