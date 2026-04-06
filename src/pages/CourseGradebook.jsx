@@ -55,10 +55,9 @@ export function CourseGradebook() {
   useEffect(() => {
     // Load data
     const loadedStudents = DataStore.getStudentsByCourse(courseId);
+    const loadedActivities = DataStore.getActivities(courseId, currentPeriod);
     setStudents(loadedStudents);
-    setActivities(DataStore.getActivities(courseId, currentPeriod));
-    setStudents(loadedStudents);
-    setActivities(DataStore.getActivities(courseId, currentPeriod));
+    setActivities(loadedActivities);
     setMaterials(DataStore.getMaterials(courseId, currentPeriod));
     
     const details = DataStore.getCourseDetails(courseId);
@@ -66,6 +65,10 @@ export function CourseGradebook() {
     setCourseSchedule(details.schedule || '');
 
     // Automated Observation Check
+    // IMPORTANT: Only run if this period already has activities.
+    // This prevents auto-notes from being written into blank/new periods (2, 3, 4).
+    if (loadedActivities.length === 0) return;
+
     let hasChanges = false;
     const pendingEmailNote = "Pendiente de correo electrónico de acudiente";
     const pendingPhoneNote = "No ha proporcionado número telefónico del acudiente";
@@ -105,6 +108,7 @@ export function CourseGradebook() {
     }
 
   }, [courseId, refreshTrigger, currentPeriod]);
+
 
   // Delete Course Timer Logic
   useEffect(() => {
