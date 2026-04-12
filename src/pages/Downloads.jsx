@@ -10,7 +10,7 @@ export function Downloads() {
   const [reportType, setReportType] = useState('students');
   const [scope, setScope] = useState('all');
   const [studentScope, setStudentScope] = useState('all');
-  const [observerIncludeVPS, setObserverIncludeVPS] = useState(true);
+  const [observerIncludeVPS, setObserverIncludeVPS] = useState(false);
   const [periodScope, setPeriodScope] = useState('current'); // 'all' | 'current' | '1'-'4'
   const [ecoMode, setEcoMode] = useState(false);
 
