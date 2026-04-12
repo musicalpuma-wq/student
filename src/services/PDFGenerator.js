@@ -247,15 +247,30 @@ export const PDFGenerator = {
     doc.save(`attendance_${scope === 'all' ? 'all_courses' : scope}_${periodLabel}.pdf`);
   },
 
-  // Generate Observer Annotations Report (Optimized for cutting per student)
-  generateObserverReport: (scope, studentScope, includeVPS, periodScope, subjectName) => {
+  // Generate Observer Annotations Report
+  generateObserverReport: (scope, studentScope, includeVPS, periodScope, subjectName, ecoMode = false) => {
     const doc = new jsPDF();
     const courses = scope === 'all'
         ? DataStore.getCourses()
         : [scope];
     const periods = periodScope === 'all' ? ['1','2','3','4'] : [periodScope];
 
-    let firstPage = true;
+    // Eco mode constants
+    const pageWidth = doc.internal.pageSize.width || doc.internal.pageSize.getWidth();
+    const pageHeight = doc.internal.pageSize.height || doc.internal.pageSize.getHeight();
+    const margin = ecoMode ? 10 : 14;
+    const colGap = 6;
+    const colWidth = ecoMode ? (pageWidth - margin * 2 - colGap) / 2 : (pageWidth - margin * 2);
+    const textWidth = ecoMode ? colWidth - 4 : 170;
+    const fontSize = ecoMode ? 8 : 10;
+    const nameSize = ecoMode ? 9 : 13;
+    const lineH = ecoMode ? 3.2 : 5;
+    const noteGap = ecoMode ? 0.5 : 2;
+    const blockGap = ecoMode ? 4 : 8;
+    const periodHeaderH = ecoMode ? 4 : 6;
+
+    // Collect all student blocks across courses
+    const allBlocks = [];
 
     courses.forEach((courseId) => {
         let students = DataStore.getStudentsByCourse(courseId)
@@ -265,34 +280,10 @@ export const PDFGenerator = {
             students = students.filter(s => s.id === studentScope);
         }
 
-        // Filter to only students with annotations in selected periods
         students = students.filter(s => {
             if (!s.annotations || typeof s.annotations !== 'object') return false;
             return periods.some(p => s.annotations[p] && s.annotations[p].length > 0);
         });
-
-        if (students.length === 0) return;
-
-        const pageHeight = doc.internal.pageSize.height || doc.internal.pageSize.getHeight();
-        let y = 20;
-
-        // Estimate the total height of a student block before rendering
-        const estimateStudentHeight = (annotationsByPeriod) => {
-            let h = 0;
-            h += 5; // name line
-            h += 3; // course info line
-            h += 6; // divider + spacing
-            annotationsByPeriod.forEach(({ notes }) => {
-                if (periods.length > 1) h += 6; // period sub-header
-                notes.forEach(note => {
-                    const lines = doc.splitTextToSize(note, 170);
-                    h += (lines.length * 5) + 2;
-                });
-                h += 2;
-            });
-            h += 8; // cut line + spacing after
-            return h;
-        };
 
         students.forEach(student => {
             const annotationsByPeriod = [];
@@ -302,79 +293,161 @@ export const PDFGenerator = {
                     annotationsByPeriod.push({ period: p, notes });
                 }
             });
-
             if (annotationsByPeriod.length === 0) return;
+            allBlocks.push({ student, courseId, annotationsByPeriod });
+        });
+    });
 
-            const blockHeight = estimateStudentHeight(annotationsByPeriod);
+    if (allBlocks.length === 0) {
+        doc.setFontSize(12);
+        doc.text("No observer annotations found for the selected criteria.", 14, 20);
+        doc.save(`observer_report_${scope === 'all' ? 'all_courses' : scope}.pdf`);
+        return;
+    }
 
-            // If this is the first student, start the first page
-            if (firstPage) {
-                firstPage = false;
-                y = 20;
-            } else {
-                // Check if the entire student block fits on the current page
-                if (y + blockHeight > pageHeight - 10) {
-                    doc.addPage();
-                    y = 20;
-                }
-            }
+    // Estimate block height
+    const estimateBlock = (block) => {
+        let h = 0;
+        h += ecoMode ? 3.5 : 5; // name
+        if (!ecoMode) h += 3 + 6; // course info + divider
+        block.annotationsByPeriod.forEach(({ notes }) => {
+            if (periods.length > 1) h += periodHeaderH;
+            notes.forEach(note => {
+                const lines = doc.splitTextToSize(note, textWidth);
+                h += (lines.length * lineH) + noteGap;
+            });
+            h += ecoMode ? 1 : 2;
+        });
+        h += blockGap;
+        return h;
+    };
 
-            // Student header with subject name for physical cutting identification
-            doc.setFontSize(13);
-            doc.setFont('helvetica', 'bold');
-            const vpsText = includeVPS ? `  (VPS: ${student.vpsCode || '-'})` : '';
-            const subjectText = subjectName ? `  —  ${subjectName}` : '';
-            doc.text(`${student.name}${vpsText}${subjectText}`, 14, y);
-            y += 5;
+    // Render a single student block at (x, y), returns new y after block
+    const renderBlock = (block, x, startY) => {
+        let y = startY;
+        const { student, courseId: cId, annotationsByPeriod } = block;
 
+        // Student name header
+        doc.setFontSize(nameSize);
+        doc.setFont('helvetica', 'bold');
+        const vpsText = includeVPS ? ` (${student.vpsCode || '-'})` : '';
+        const subjectText = subjectName ? ` — ${subjectName}` : '';
+        const nameStr = `${student.name}${vpsText}${subjectText}`;
+        const nameLines = doc.splitTextToSize(nameStr, textWidth);
+        doc.text(nameLines, x, y);
+        y += nameLines.length * (ecoMode ? 3.5 : 5);
+
+        if (!ecoMode) {
             // Course info line
             doc.setFontSize(9);
             doc.setFont('helvetica', 'normal');
             doc.setTextColor(120, 120, 120);
-            doc.text(`${courseId}  |  Generated: ${new Date().toLocaleDateString()}`, 14, y);
+            doc.text(`${cId}  |  Generated: ${new Date().toLocaleDateString()}`, x, y);
             doc.setTextColor(0, 0, 0);
             y += 3;
-
-            // Divider line
+            // Divider
             doc.setLineWidth(0.5);
-            doc.line(14, y, 196, y);
+            doc.line(x, y, x + textWidth, y);
             y += 6;
+        }
 
-            annotationsByPeriod.forEach(({ period, notes }) => {
-                if (periods.length > 1) {
-                    doc.setFontSize(11);
-                    doc.setFont('helvetica', 'bold');
-                    doc.text(`Period ${period}`, 14, y);
-                    y += 6;
-                    doc.setFont('helvetica', 'normal');
+        annotationsByPeriod.forEach(({ period, notes }) => {
+            if (periods.length > 1) {
+                doc.setFontSize(ecoMode ? 8 : 11);
+                doc.setFont('helvetica', 'bold');
+                doc.text(`P${period}`, x, y);
+                y += periodHeaderH;
+                doc.setFont('helvetica', 'normal');
+            }
+
+            doc.setFontSize(fontSize);
+            doc.setFont('helvetica', 'normal');
+
+            notes.forEach(note => {
+                const lines = doc.splitTextToSize(note, textWidth);
+                if (ecoMode) {
+                    doc.text(lines, x, y);
+                } else {
+                    doc.text('•', x, y);
+                    doc.text(lines, x + 6, y);
                 }
-
-                doc.setFontSize(10);
-
-                notes.forEach(note => {
-                    const lines = doc.splitTextToSize(note, 170);
-                    doc.text('•', 14, y);
-                    doc.text(lines, 20, y);
-                    y += (lines.length * 5) + 2;
-                });
-
-                y += 2;
+                y += (lines.length * lineH) + noteGap;
             });
+            y += ecoMode ? 1 : 2;
+        });
 
-            // Dashed cut line at the bottom of each student block
+        if (!ecoMode) {
+            // Dashed cut line
             doc.setDrawColor(180, 180, 180);
             doc.setLineWidth(0.3);
             doc.setLineDashPattern([3, 3], 0);
-            doc.line(10, y + 2, 200, y + 2);
+            doc.line(x - 4, y, x + textWidth + 4, y);
             doc.setLineDashPattern([], 0);
             doc.setDrawColor(0, 0, 0);
-            y += 8;
-        });
-    });
+        }
 
-    if (firstPage) {
-        doc.setFontSize(12);
-        doc.text("No observer annotations found for the selected criteria.", 14, 20);
+        y += blockGap;
+        return y;
+    };
+
+    if (ecoMode) {
+        // --- Two-column eco layout ---
+        let col = 0; // 0 = left, 1 = right
+        let colY = [margin, margin];
+        let firstPage = true;
+
+        const colX = (c) => c === 0 ? margin : margin + colWidth + colGap;
+
+        const newPage = () => {
+            if (!firstPage) doc.addPage();
+            firstPage = false;
+            colY = [margin, margin];
+            col = 0;
+        };
+
+        newPage();
+
+        allBlocks.forEach(block => {
+            const bh = estimateBlock(block);
+            const maxY = pageHeight - margin;
+
+            // Try to fit in current column
+            if (colY[col] + bh <= maxY) {
+                colY[col] = renderBlock(block, colX(col), colY[col]);
+            } else if (col === 0) {
+                // Try right column
+                col = 1;
+                if (colY[col] + bh <= maxY) {
+                    colY[col] = renderBlock(block, colX(col), colY[col]);
+                } else {
+                    // New page, left column
+                    newPage();
+                    colY[col] = renderBlock(block, colX(col), colY[col]);
+                }
+            } else {
+                // Both columns exhausted, new page
+                newPage();
+                colY[col] = renderBlock(block, colX(col), colY[col]);
+            }
+        });
+    } else {
+        // --- Normal single-column layout ---
+        let y = 20;
+        let firstPage = true;
+
+        allBlocks.forEach(block => {
+            const bh = estimateBlock(block);
+
+            if (firstPage) {
+                firstPage = false;
+                y = 20;
+            } else if (y + bh > pageHeight - 10) {
+                doc.addPage();
+                y = 20;
+            }
+
+            y = renderBlock(block, margin, y);
+        });
     }
 
     const periodLabel = periodScope === 'all' ? 'all_periods' : `period_${periodScope}`;

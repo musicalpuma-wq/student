@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { DataStore } from '../services/DataStore';
 import { PDFGenerator } from '../services/PDFGenerator';
-import { Download } from 'lucide-react';
+import { Download, Leaf } from 'lucide-react';
 import { useSettings } from '../context/SettingsContext';
 
 export function Downloads() {
@@ -12,6 +12,7 @@ export function Downloads() {
   const [studentScope, setStudentScope] = useState('all');
   const [observerIncludeVPS, setObserverIncludeVPS] = useState(true);
   const [periodScope, setPeriodScope] = useState('current'); // 'all' | 'current' | '1'-'4'
+  const [ecoMode, setEcoMode] = useState(false);
 
   const [selectedFields, setSelectedFields] = useState({
       studentCount: false,
@@ -47,7 +48,7 @@ export function Downloads() {
       } else if (reportType === 'attendance') {
           PDFGenerator.generateAttendanceReport(scope, effectivePeriod);
       } else if (reportType === 'observer') {
-          PDFGenerator.generateObserverReport(scope, studentScope, observerIncludeVPS, effectivePeriod, settings.subject);
+          PDFGenerator.generateObserverReport(scope, studentScope, observerIncludeVPS, effectivePeriod, settings.subject, ecoMode);
       }
   };
 
@@ -234,6 +235,54 @@ export function Downloads() {
                         ))}
                     </div>
                 </>
+            )}
+
+            {/* Eco toggle (observer only) */}
+            {reportType === 'observer' && (
+                <div style={{
+                    marginBottom: '1.5rem',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '12px',
+                    padding: '1rem 1.2rem',
+                    background: ecoMode ? 'rgba(52, 199, 89, 0.1)' : 'var(--color-bg-body)',
+                    borderRadius: '10px',
+                    border: ecoMode ? '1px solid var(--color-success)' : '1px solid var(--color-border)',
+                    transition: 'all 0.2s ease'
+                }}>
+                    <Leaf size={20} style={{ color: ecoMode ? 'var(--color-success)' : 'var(--color-text-secondary)', flexShrink: 0 }} />
+                    <div style={{ flex: 1 }}>
+                        <span style={{ fontWeight: 600, fontSize: '1rem' }}>Eco</span>
+                        <span style={{ fontSize: '0.85rem', color: 'var(--color-text-secondary)', marginLeft: '8px' }}>
+                            Ahorra papel: letra compacta, 2 columnas, sin líneas decorativas
+                        </span>
+                    </div>
+                    <div
+                        onClick={() => setEcoMode(!ecoMode)}
+                        style={{
+                            width: '44px',
+                            height: '24px',
+                            borderRadius: '12px',
+                            background: ecoMode ? 'var(--color-success)' : '#ccc',
+                            cursor: 'pointer',
+                            position: 'relative',
+                            transition: 'background 0.2s ease',
+                            flexShrink: 0
+                        }}
+                    >
+                        <div style={{
+                            width: '20px',
+                            height: '20px',
+                            borderRadius: '50%',
+                            background: 'white',
+                            position: 'absolute',
+                            top: '2px',
+                            left: ecoMode ? '22px' : '2px',
+                            transition: 'left 0.2s ease',
+                            boxShadow: '0 1px 3px rgba(0,0,0,0.2)'
+                        }} />
+                    </div>
+                </div>
             )}
 
             {/* Action */}
