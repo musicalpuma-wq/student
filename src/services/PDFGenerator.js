@@ -331,7 +331,9 @@ export const PDFGenerator = {
         doc.setFontSize(nameSize);
         doc.setFont('helvetica', 'bold');
         const vpsText = includeVPS ? ` (${student.vpsCode || '-'})` : '';
-        const subjectText = subjectName ? ` — ${subjectName}` : '';
+        const subjectText = subjectName
+            ? (ecoMode ? ` — ${subjectName} ${cId}` : ` — ${subjectName}`)
+            : (ecoMode ? ` — ${cId}` : '');
         const nameStr = `${student.name}${vpsText}${subjectText}`;
         const nameLines = doc.splitTextToSize(nameStr, textWidth);
         doc.text(nameLines, x, y);
