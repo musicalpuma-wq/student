@@ -1,18 +1,18 @@
 import { useState, useEffect } from 'react';
 import { DataStore } from '../services/DataStore';
 import { PDFGenerator } from '../services/PDFGenerator';
-import { Download, FileText, CheckCircle2 } from 'lucide-react';
+import { Download } from 'lucide-react';
 import { useSettings } from '../context/SettingsContext';
 
 export function Downloads() {
-  const { t } = useSettings();
+  const { t, settings } = useSettings();
   const [courses, setCourses] = useState([]);
-  const [reportType, setReportType] = useState('students'); // 'students' | 'grades' | 'observer'
-  const [scope, setScope] = useState('all'); // 'all' | courseId
-  const [studentScope, setStudentScope] = useState('all'); // 'all' | studentId
+  const [reportType, setReportType] = useState('students');
+  const [scope, setScope] = useState('all');
+  const [studentScope, setStudentScope] = useState('all');
   const [observerIncludeVPS, setObserverIncludeVPS] = useState(true);
-  
-  // Field Selector for Student Data
+  const [periodScope, setPeriodScope] = useState('current'); // 'all' | 'current' | '1'-'4'
+
   const [selectedFields, setSelectedFields] = useState({
       studentCount: false,
       vpsCode: true,
@@ -30,22 +30,45 @@ export function Downloads() {
   }, []);
 
   useEffect(() => {
-    // Reset student filter when course changes
     setStudentScope('all');
   }, [scope]);
 
+  const getEffectivePeriod = () => {
+    if (periodScope === 'current') return settings.currentPeriod || '1';
+    return periodScope;
+  };
+
   const handleDownload = () => {
+      const effectivePeriod = getEffectivePeriod();
       if (reportType === 'students') {
           PDFGenerator.generateStudentDataReport(scope, selectedFields);
       } else if (reportType === 'grades') {
-          PDFGenerator.generateGradesReport(scope);
+          PDFGenerator.generateGradesReport(scope, effectivePeriod);
+      } else if (reportType === 'attendance') {
+          PDFGenerator.generateAttendanceReport(scope, effectivePeriod);
       } else if (reportType === 'observer') {
-          PDFGenerator.generateObserverReport(scope, studentScope, observerIncludeVPS);
+          PDFGenerator.generateObserverReport(scope, studentScope, observerIncludeVPS, effectivePeriod, settings.subject);
       }
   };
 
   const toggleField = (field) => {
       setSelectedFields(prev => ({ ...prev, [field]: !prev[field] }));
+  };
+
+  const showPeriodSelector = reportType !== 'students';
+
+  // Get students with annotations for the selected periods (for the student filter dropdown)
+  const getStudentsWithAnnotations = () => {
+    if (scope === 'all') return [];
+    const students = DataStore.getStudentsByCourse(scope)
+      .sort((a, b) => a.name.localeCompare(b.name));
+    const effectivePeriod = getEffectivePeriod();
+    const periods = effectivePeriod === 'all' ? ['1','2','3','4'] : [effectivePeriod];
+
+    return students.filter(s => {
+      if (!s.annotations || typeof s.annotations !== 'object') return false;
+      return periods.some(p => s.annotations[p] && s.annotations[p].length > 0);
+    });
   };
 
   return (
@@ -56,40 +79,25 @@ export function Downloads() {
         <div className="card" style={{ padding: '2rem' }}>
             {/* Report Type */}
             <h3 style={{ marginBottom: '1rem', borderBottom: '1px solid var(--color-border)', paddingBottom: '0.5rem' }}>{t('selectReportType')}</h3>
-            <div style={{ display: 'flex', gap: '2rem', marginBottom: '2rem' }}>
-                <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '1.1rem' }}>
-                    <input 
-                        type="radio" 
-                        name="reportType" 
-                        value="students" 
-                        checked={reportType === 'students'}
-                        onChange={() => setReportType('students')}
-                        style={{ width: '18px', height: '18px' }}
-                    />
-                    {t('reportStudentList')}
-                </label>
-                <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '1.1rem' }}>
-                    <input 
-                        type="radio" 
-                        name="reportType" 
-                        value="grades" 
-                        checked={reportType === 'grades'}
-                        onChange={() => setReportType('grades')}
-                        style={{ width: '18px', height: '18px' }}
-                    />
-                    {t('reportGradebook')}
-                </label>
-                <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '1.1rem' }}>
-                    <input 
-                        type="radio" 
-                        name="reportType" 
-                        value="observer" 
-                        checked={reportType === 'observer'}
-                        onChange={() => setReportType('observer')}
-                        style={{ width: '18px', height: '18px' }}
-                    />
-                    {t('tabObserver') || 'Observer Annotations'}
-                </label>
+            <div style={{ display: 'flex', gap: '1.5rem', marginBottom: '2rem', flexWrap: 'wrap' }}>
+                {[
+                  { value: 'students', label: t('reportStudentList') },
+                  { value: 'grades', label: t('reportGradebook') },
+                  { value: 'attendance', label: t('reportAttendance') },
+                  { value: 'observer', label: t('tabObserver') || 'Observer' },
+                ].map(opt => (
+                  <label key={opt.value} style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '1.1rem' }}>
+                      <input
+                          type="radio"
+                          name="reportType"
+                          value={opt.value}
+                          checked={reportType === opt.value}
+                          onChange={() => setReportType(opt.value)}
+                          style={{ width: '18px', height: '18px' }}
+                      />
+                      {opt.label}
+                  </label>
+                ))}
             </div>
 
             {/* Field Selection (Only for Student List) */}
@@ -99,8 +107,8 @@ export function Downloads() {
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '1rem' }}>
                         {Object.keys(selectedFields).map(key => (
                             <label key={key} style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
-                                <input 
-                                    type="checkbox" 
+                                <input
+                                    type="checkbox"
                                     checked={selectedFields[key]}
                                     onChange={() => toggleField(key)}
                                 />
@@ -116,10 +124,10 @@ export function Downloads() {
             <div style={{ marginBottom: '2rem' }}>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                     <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
-                        <input 
-                            type="radio" 
-                            name="scope" 
-                            value="all" 
+                        <input
+                            type="radio"
+                            name="scope"
+                            value="all"
                             checked={scope === 'all'}
                             onChange={() => setScope('all')}
                         />
@@ -127,17 +135,17 @@ export function Downloads() {
                     </label>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
                          <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
-                            <input 
-                                type="radio" 
-                                name="scope" 
-                                value="single" 
+                            <input
+                                type="radio"
+                                name="scope"
+                                value="single"
                                 checked={scope !== 'all'}
                                 onChange={() => setScope(courses[0] || '')}
                             />
                             {t('specificCourse')}
                         </label>
-                        <select 
-                            className="input-field" 
+                        <select
+                            className="input-field"
                             style={{ padding: '4px 8px', minWidth: '150px' }}
                             value={scope === 'all' ? '' : scope}
                             onChange={(e) => setScope(e.target.value)}
@@ -150,43 +158,87 @@ export function Downloads() {
                     </div>
                 </div>
 
+                {/* Student filter for observer */}
                 {reportType === 'observer' && scope !== 'all' && (
                     <div style={{ marginTop: '1rem', display: 'flex', alignItems: 'center', gap: '1rem', marginLeft: '2rem' }}>
-                        <span style={{ fontSize: '0.9rem', color: 'var(--color-text-secondary)' }}>Student:</span>
-                        <select 
-                            className="input-field" 
+                        <span style={{ fontSize: '0.9rem', color: 'var(--color-text-secondary)' }}>{t('studentFilter')}</span>
+                        <select
+                            className="input-field"
                             style={{ padding: '4px 8px', minWidth: '200px' }}
                             value={studentScope}
                             onChange={(e) => setStudentScope(e.target.value)}
                         >
-                            <option value="all">All Students with Annotations</option>
-                            {DataStore.getStudentsByCourse(scope)
-                                .sort((a, b) => a.name.localeCompare(b.name))
-                                .filter(s => s.annotations && s.annotations.length > 0)
-                                .map(s => (
-                                <option key={s.id} value={s.id}>{s.name} ({s.annotations.length})</option>
-                            ))}
+                            <option value="all">{t('allStudentsWithAnnotations')}</option>
+                            {getStudentsWithAnnotations().map(s => {
+                                const totalNotes = ['1','2','3','4'].reduce((sum, p) =>
+                                    sum + ((s.annotations && s.annotations[p]) || []).length, 0);
+                                return (
+                                    <option key={s.id} value={s.id}>{s.name} ({totalNotes})</option>
+                                );
+                            })}
                         </select>
                     </div>
                 )}
-                
+
+                {/* VPS toggle for observer */}
                 {reportType === 'observer' && (
                     <div style={{ marginTop: '1rem', marginLeft: '2rem' }}>
                         <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
-                            <input 
-                                type="checkbox" 
+                            <input
+                                type="checkbox"
                                 checked={observerIncludeVPS}
                                 onChange={(e) => setObserverIncludeVPS(e.target.checked)}
                             />
-                            {t('includeFields') ? t('includeFields').replace(':', '') + ' VPS' : 'Include VPS'}
+                            {t('includeVPS')}
                         </label>
                     </div>
                 )}
             </div>
 
+            {/* Period Selection (not for student list) */}
+            {showPeriodSelector && (
+                <>
+                    <h3 style={{ marginBottom: '1rem', borderBottom: '1px solid var(--color-border)', paddingBottom: '0.5rem' }}>{t('selectPeriod')}</h3>
+                    <div style={{ display: 'flex', gap: '1.5rem', marginBottom: '2rem', flexWrap: 'wrap', alignItems: 'center' }}>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+                            <input
+                                type="radio"
+                                name="period"
+                                value="all"
+                                checked={periodScope === 'all'}
+                                onChange={() => setPeriodScope('all')}
+                            />
+                            {t('allPeriods')}
+                        </label>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+                            <input
+                                type="radio"
+                                name="period"
+                                value="current"
+                                checked={periodScope === 'current'}
+                                onChange={() => setPeriodScope('current')}
+                            />
+                            {t('period')} {settings.currentPeriod || '1'} ({t('period').toLowerCase()} actual)
+                        </label>
+                        {['1','2','3','4'].map(p => (
+                            <label key={p} style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}>
+                                <input
+                                    type="radio"
+                                    name="period"
+                                    value={p}
+                                    checked={periodScope === p}
+                                    onChange={() => setPeriodScope(p)}
+                                />
+                                {t('period')} {p}
+                            </label>
+                        ))}
+                    </div>
+                </>
+            )}
+
             {/* Action */}
             <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-                <button 
+                <button
                     onClick={handleDownload}
                     className="btn"
                     style={{ padding: '0.8rem 2rem', fontSize: '1.1rem', display: 'flex', alignItems: 'center', gap: '10px' }}

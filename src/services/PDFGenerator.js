@@ -5,11 +5,8 @@ import { DataStore } from './DataStore';
 export const PDFGenerator = {
   // Generate Student List (Registration Data)
   generateStudentDataReport: (scope, selectedFields) => {
-    // scope: 'all' or specific courseId
-    // selectedFields: { name: true, age: true, ... }
-
     const doc = new jsPDF();
-    const courses = scope === 'all' 
+    const courses = scope === 'all'
         ? DataStore.getCourses()
         : [scope];
 
@@ -23,11 +20,10 @@ export const PDFGenerator = {
 
       const students = DataStore.getStudentsByCourse(courseId)
         .sort((a, b) => a.name.localeCompare(b.name));
-      
-      // Define Columns
+
       const tableHead = [];
       const headers = [];
-      
+
       if (selectedFields.studentCount) headers.push('#');
       if (selectedFields.vpsCode) headers.push('VPS');
       if (selectedFields.name) headers.push('Name');
@@ -37,10 +33,9 @@ export const PDFGenerator = {
       if (selectedFields.parentPhone) headers.push('Phone');
       if (selectedFields.parentEmail) headers.push('Email');
       if (selectedFields.generalObservations) headers.push('General Observations');
-      
+
       tableHead.push(headers);
 
-      // Define Rows
       const tableBody = students.map((s, i) => {
           const row = [];
           if (selectedFields.studentCount) row.push(i + 1);
@@ -52,9 +47,16 @@ export const PDFGenerator = {
           if (selectedFields.parentPhone) row.push(s.parentPhone);
           if (selectedFields.parentEmail) row.push(s.parentEmail);
           if (selectedFields.generalObservations) {
-              // Join all annotations into a single string
-              const obs = (s.annotations || []).join('\n');
-              row.push(obs);
+              // Join all annotations across all periods
+              const allAnnotations = [];
+              if (s.annotations && typeof s.annotations === 'object' && !Array.isArray(s.annotations)) {
+                  for (const p of ['1','2','3','4']) {
+                      if (s.annotations[p]) allAnnotations.push(...s.annotations[p]);
+                  }
+              } else if (Array.isArray(s.annotations)) {
+                  allAnnotations.push(...s.annotations);
+              }
+              row.push(allAnnotations.join('\n'));
           }
           return row;
       });
@@ -72,82 +74,186 @@ export const PDFGenerator = {
   },
 
   // Generate Gradebook
-  generateGradesReport: (scope) => {
+  generateGradesReport: (scope, periodScope) => {
+    // periodScope: 'all' or '1','2','3','4'
     const doc = new jsPDF('l'); // Landscape for grades
-    const courses = scope === 'all' 
+    const courses = scope === 'all'
         ? DataStore.getCourses()
         : [scope];
+    const periods = periodScope === 'all' ? ['1','2','3','4'] : [periodScope];
 
-    courses.forEach((courseId, index) => {
-      if (index > 0) doc.addPage();
+    let firstPage = true;
 
-      // Header
-      doc.setFontSize(18);
-      doc.text(`Gradebook - ${courseId}`, 14, 20);
-      doc.setFontSize(10);
-      doc.text(`Generated: ${new Date().toLocaleDateString()}`, 14, 28);
+    courses.forEach((courseId) => {
+      periods.forEach((period) => {
+        const activities = DataStore.getActivities(courseId, period);
+        if (activities.length === 0) return; // Skip empty periods
 
-      const students = DataStore.getStudentsByCourse(courseId)
-        .sort((a, b) => a.name.localeCompare(b.name));
-      const activities = DataStore.getActivities(courseId);
+        if (!firstPage) doc.addPage('l');
+        firstPage = false;
 
-      // Columns
-      // VPS, Name, [Activities...], Average
-      const headers = ['VPS', 'Name', ...activities.map(a => a.name), 'Avg.'];
-      
-      const body = students.map(s => {
-          const row = [
-              s.vpsCode || '-',
-              s.name
-          ];
-          
-          let sum = 0;
-          let count = 0;
+        doc.setFontSize(18);
+        doc.text(`Gradebook - ${courseId}`, 14, 20);
+        doc.setFontSize(11);
+        doc.text(`Period ${period}`, 14, 27);
+        doc.setFontSize(10);
+        doc.text(`Generated: ${new Date().toLocaleDateString()}`, 14, 33);
 
-          activities.forEach(a => {
-              const g = (s.grades || {})[a.id];
-              const val = parseFloat(g);
-              if (!isNaN(val)) {
-                  row.push(val.toFixed(1));
-                  sum += val;
-                  count++;
-              } else {
-                  row.push('-');
-                  // Empty treated as 1.0 for avg? user said "empty cells count as 1.0"
-                  sum += 1.0;
-                  count++;
-              }
-          });
+        const students = DataStore.getStudentsByCourse(courseId)
+          .sort((a, b) => a.name.localeCompare(b.name));
 
-          // Calc avg
-          // Wait, user logic: "las casillas vacías tómalas como un '1,0'".
-          // My previous logic in Header was correct. Here too.
-          // Note: If no activities exist, avg is '-'.
-          const avg = count > 0 ? (sum / count).toFixed(1) : '-';
-          row.push(avg);
-          
-          return row;
-      });
+        const headers = ['VPS', 'Name', ...activities.map(a => a.name), 'Avg.'];
 
-      autoTable(doc, {
-        startY: 35,
-        head: [headers],
-        body: body,
-        theme: 'grid',
-        headStyles: { fillColor: [0, 113, 227] }, // Blue accent
-        styles: { fontSize: 8 }
+        const body = students.map(s => {
+            const row = [
+                s.vpsCode || '-',
+                s.name
+            ];
+
+            let sum = 0;
+            let count = 0;
+            const periodGrades = (s.grades && s.grades[period]) || {};
+
+            activities.forEach(a => {
+                const g = periodGrades[a.id];
+                const val = parseFloat(g);
+                if (!isNaN(val)) {
+                    row.push(val.toFixed(1));
+                    sum += val;
+                    count++;
+                } else {
+                    row.push('-');
+                    sum += 1.0;
+                    count++;
+                }
+            });
+
+            const avg = count > 0 ? (sum / count).toFixed(1) : '-';
+            row.push(avg);
+
+            return row;
+        });
+
+        autoTable(doc, {
+          startY: 38,
+          head: [headers],
+          body: body,
+          theme: 'grid',
+          headStyles: { fillColor: [0, 113, 227] },
+          styles: { fontSize: 8 }
+        });
       });
     });
 
-    doc.save(`gradebook_${scope === 'all' ? 'all_courses' : scope}.pdf`);
+    if (firstPage) {
+      doc.setFontSize(12);
+      doc.text("No grade data found for the selected criteria.", 14, 20);
+    }
+
+    const periodLabel = periodScope === 'all' ? 'all_periods' : `period_${periodScope}`;
+    doc.save(`gradebook_${scope === 'all' ? 'all_courses' : scope}_${periodLabel}.pdf`);
   },
 
-  // Generate Observer Annotations Report (Optimized for space)
-  generateObserverReport: (scope, studentScope, includeVPS = true) => {
-    const doc = new jsPDF();
-    const courses = scope === 'all' 
+  // Generate Attendance Report
+  generateAttendanceReport: (scope, periodScope) => {
+    const doc = new jsPDF('l'); // Landscape for dates
+    const courses = scope === 'all'
         ? DataStore.getCourses()
         : [scope];
+    const periods = periodScope === 'all' ? ['1','2','3','4'] : [periodScope];
+
+    let firstPage = true;
+
+    courses.forEach((courseId) => {
+      periods.forEach((period) => {
+        const students = DataStore.getStudentsByCourse(courseId)
+          .sort((a, b) => a.name.localeCompare(b.name));
+
+        // Collect all unique dates for this course+period
+        const dateSet = new Set();
+        students.forEach(s => {
+          const periodAttendance = (s.attendance && s.attendance[period]) || {};
+          Object.keys(periodAttendance).forEach(d => dateSet.add(d));
+        });
+        const dates = [...dateSet].sort();
+
+        if (dates.length === 0) return; // Skip empty periods
+
+        if (!firstPage) doc.addPage('l');
+        firstPage = false;
+
+        doc.setFontSize(18);
+        doc.text(`Attendance - ${courseId}`, 14, 20);
+        doc.setFontSize(11);
+        doc.text(`Period ${period}`, 14, 27);
+        doc.setFontSize(10);
+        doc.text(`Generated: ${new Date().toLocaleDateString()}`, 14, 33);
+
+        // Format date headers (MM/DD)
+        const shortDates = dates.map(d => {
+          const parts = d.split('-');
+          return parts.length === 3 ? `${parts[1]}/${parts[2]}` : d;
+        });
+
+        const headers = ['VPS', 'Name', ...shortDates, 'Abs.', 'Late'];
+
+        const body = students.map(s => {
+          const periodAttendance = (s.attendance && s.attendance[period]) || {};
+          const row = [s.vpsCode || '-', s.name];
+          let absences = 0;
+          let lates = 0;
+
+          dates.forEach(d => {
+            const status = periodAttendance[d];
+            if (status === 'absent') {
+              row.push('F');
+              absences++;
+            } else if (status === 'late') {
+              row.push('R');
+              lates++;
+            } else if (status === 'present') {
+              row.push('✓');
+            } else {
+              row.push('');
+            }
+          });
+
+          row.push(absences > 0 ? absences : '-');
+          row.push(lates > 0 ? lates : '-');
+          return row;
+        });
+
+        autoTable(doc, {
+          startY: 38,
+          head: [headers],
+          body: body,
+          theme: 'grid',
+          headStyles: { fillColor: [52, 199, 89] }, // Green accent
+          styles: { fontSize: 7, cellPadding: 2 },
+          columnStyles: {
+            0: { cellWidth: 20 },
+            1: { cellWidth: 35 },
+          }
+        });
+      });
+    });
+
+    if (firstPage) {
+      doc.setFontSize(12);
+      doc.text("No attendance records found for the selected criteria.", 14, 20);
+    }
+
+    const periodLabel = periodScope === 'all' ? 'all_periods' : `period_${periodScope}`;
+    doc.save(`attendance_${scope === 'all' ? 'all_courses' : scope}_${periodLabel}.pdf`);
+  },
+
+  // Generate Observer Annotations Report (Optimized for cutting per student)
+  generateObserverReport: (scope, studentScope, includeVPS, periodScope, subjectName) => {
+    const doc = new jsPDF();
+    const courses = scope === 'all'
+        ? DataStore.getCourses()
+        : [scope];
+    const periods = periodScope === 'all' ? ['1','2','3','4'] : [periodScope];
 
     let firstPage = true;
 
@@ -158,78 +264,103 @@ export const PDFGenerator = {
         if (studentScope && studentScope !== 'all') {
             students = students.filter(s => s.id === studentScope);
         }
-        
-        // Filter to only students with annotations
-        students = students.filter(s => s.annotations && s.annotations.length > 0);
 
-        if (students.length === 0) return; // Skip if no annotations
+        // Filter to only students with annotations in selected periods
+        students = students.filter(s => {
+            if (!s.annotations || typeof s.annotations !== 'object') return false;
+            return periods.some(p => s.annotations[p] && s.annotations[p].length > 0);
+        });
 
-        if (!firstPage) doc.addPage();
-        firstPage = false;
-
-        doc.setFontSize(16);
-        doc.setFont('helvetica', 'bold');
-        doc.text(`Observer Annotations - ${courseId}`, 14, 20);
-        doc.setFontSize(10);
-        doc.setFont('helvetica', 'normal');
-        doc.text(`Generated: ${new Date().toLocaleDateString()}`, 14, 26);
-        doc.setLineWidth(0.5);
-        doc.line(14, 28, 196, 28); // Horizontal divider
-
-        let y = 36;
-        const pageHeight = doc.internal.pageSize.height || doc.internal.pageSize.getHeight();
+        if (students.length === 0) return;
 
         students.forEach(student => {
-            // Check if we need a new page for the student name header
-            if (y > pageHeight - 30) {
-                doc.addPage();
-                y = 20;
-            }
+            // Collect annotations for selected periods
+            const annotationsByPeriod = [];
+            periods.forEach(p => {
+                const notes = (student.annotations && student.annotations[p]) || [];
+                if (notes.length > 0) {
+                    annotationsByPeriod.push({ period: p, notes });
+                }
+            });
 
-            // Student Name Header
-            doc.setFontSize(12);
+            if (annotationsByPeriod.length === 0) return;
+
+            if (!firstPage) doc.addPage();
+            firstPage = false;
+
+            const pageHeight = doc.internal.pageSize.height || doc.internal.pageSize.getHeight();
+            let y = 20;
+
+            // Student header with subject name for physical cutting identification
+            doc.setFontSize(13);
             doc.setFont('helvetica', 'bold');
-            const vpsText = includeVPS ? ` (VPS: ${student.vpsCode || '-'})` : '';
-            doc.text(`${student.name}${vpsText}`, 14, y);
+            const vpsText = includeVPS ? `  (VPS: ${student.vpsCode || '-'})` : '';
+            const subjectText = subjectName ? `  —  ${subjectName}` : '';
+            doc.text(`${student.name}${vpsText}${subjectText}`, 14, y);
+            y += 5;
+
+            // Course info line
+            doc.setFontSize(9);
+            doc.setFont('helvetica', 'normal');
+            doc.setTextColor(120, 120, 120);
+            doc.text(`${courseId}  |  Generated: ${new Date().toLocaleDateString()}`, 14, y);
+            doc.setTextColor(0, 0, 0);
+            y += 3;
+
+            // Divider line
+            doc.setLineWidth(0.5);
+            doc.line(14, y, 196, y);
             y += 6;
 
-            doc.setFont('helvetica', 'normal');
-            doc.setFontSize(10);
-
-            student.annotations.forEach(note => {
-                // Split text to fit width (196 - 20 margin = 176 max width)
-                const lines = doc.splitTextToSize(note, 170);
-                
-                // If this note block doesn't fit, add a new page
-                if (y + (lines.length * 5) > pageHeight - 15) {
-                    doc.addPage();
-                    y = 20;
+            annotationsByPeriod.forEach(({ period, notes }) => {
+                // Period sub-header (only when showing multiple periods)
+                if (periods.length > 1) {
+                    if (y > pageHeight - 25) {
+                        doc.addPage();
+                        y = 20;
+                    }
+                    doc.setFontSize(11);
+                    doc.setFont('helvetica', 'bold');
+                    doc.text(`Period ${period}`, 14, y);
+                    y += 6;
+                    doc.setFont('helvetica', 'normal');
                 }
 
-                doc.text('•', 14, y);
-                doc.text(lines, 20, y);
-                y += (lines.length * 5) + 2; // Move down dynamically based on lines
+                doc.setFontSize(10);
+
+                notes.forEach(note => {
+                    const lines = doc.splitTextToSize(note, 170);
+
+                    if (y + (lines.length * 5) > pageHeight - 15) {
+                        doc.addPage();
+                        y = 20;
+                    }
+
+                    doc.text('•', 14, y);
+                    doc.text(lines, 20, y);
+                    y += (lines.length * 5) + 2;
+                });
+
+                y += 2;
             });
-            
-            y += 4; // Space after a student's block
-            
-            // Draw subtle line between students for clarity if not at end of page
-            if (y < pageHeight - 20) {
-                 doc.setDrawColor(200, 200, 200);
-                 doc.setLineWidth(0.2);
-                 doc.line(14, y - 2, 196, y - 2);
-                 doc.setDrawColor(0, 0, 0); // reset
-                 y += 4;
-            }
+
+            // Dashed cut line at the bottom of each student block
+            doc.setDrawColor(180, 180, 180);
+            doc.setLineWidth(0.3);
+            doc.setLineDashPattern([3, 3], 0);
+            const cutY = Math.min(y + 2, pageHeight - 10);
+            doc.line(10, cutY, 200, cutY);
+            doc.setLineDashPattern([], 0);
+            doc.setDrawColor(0, 0, 0);
         });
     });
 
     if (firstPage) {
-        // No annotations found for any course in scope
         doc.setFontSize(12);
         doc.text("No observer annotations found for the selected criteria.", 14, 20);
     }
 
-    doc.save(`observer_report_${scope === 'all' ? 'all_courses' : scope}.pdf`);
+    const periodLabel = periodScope === 'all' ? 'all_periods' : `period_${periodScope}`;
+    doc.save(`observer_report_${scope === 'all' ? 'all_courses' : scope}_${periodLabel}.pdf`);
   }
 };
