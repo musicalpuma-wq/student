@@ -273,8 +273,28 @@ export const PDFGenerator = {
 
         if (students.length === 0) return;
 
+        const pageHeight = doc.internal.pageSize.height || doc.internal.pageSize.getHeight();
+        let y = 20;
+
+        // Estimate the total height of a student block before rendering
+        const estimateStudentHeight = (annotationsByPeriod) => {
+            let h = 0;
+            h += 5; // name line
+            h += 3; // course info line
+            h += 6; // divider + spacing
+            annotationsByPeriod.forEach(({ notes }) => {
+                if (periods.length > 1) h += 6; // period sub-header
+                notes.forEach(note => {
+                    const lines = doc.splitTextToSize(note, 170);
+                    h += (lines.length * 5) + 2;
+                });
+                h += 2;
+            });
+            h += 8; // cut line + spacing after
+            return h;
+        };
+
         students.forEach(student => {
-            // Collect annotations for selected periods
             const annotationsByPeriod = [];
             periods.forEach(p => {
                 const notes = (student.annotations && student.annotations[p]) || [];
@@ -285,11 +305,19 @@ export const PDFGenerator = {
 
             if (annotationsByPeriod.length === 0) return;
 
-            if (!firstPage) doc.addPage();
-            firstPage = false;
+            const blockHeight = estimateStudentHeight(annotationsByPeriod);
 
-            const pageHeight = doc.internal.pageSize.height || doc.internal.pageSize.getHeight();
-            let y = 20;
+            // If this is the first student, start the first page
+            if (firstPage) {
+                firstPage = false;
+                y = 20;
+            } else {
+                // Check if the entire student block fits on the current page
+                if (y + blockHeight > pageHeight - 10) {
+                    doc.addPage();
+                    y = 20;
+                }
+            }
 
             // Student header with subject name for physical cutting identification
             doc.setFontSize(13);
@@ -313,12 +341,7 @@ export const PDFGenerator = {
             y += 6;
 
             annotationsByPeriod.forEach(({ period, notes }) => {
-                // Period sub-header (only when showing multiple periods)
                 if (periods.length > 1) {
-                    if (y > pageHeight - 25) {
-                        doc.addPage();
-                        y = 20;
-                    }
                     doc.setFontSize(11);
                     doc.setFont('helvetica', 'bold');
                     doc.text(`Period ${period}`, 14, y);
@@ -330,12 +353,6 @@ export const PDFGenerator = {
 
                 notes.forEach(note => {
                     const lines = doc.splitTextToSize(note, 170);
-
-                    if (y + (lines.length * 5) > pageHeight - 15) {
-                        doc.addPage();
-                        y = 20;
-                    }
-
                     doc.text('•', 14, y);
                     doc.text(lines, 20, y);
                     y += (lines.length * 5) + 2;
@@ -348,10 +365,10 @@ export const PDFGenerator = {
             doc.setDrawColor(180, 180, 180);
             doc.setLineWidth(0.3);
             doc.setLineDashPattern([3, 3], 0);
-            const cutY = Math.min(y + 2, pageHeight - 10);
-            doc.line(10, cutY, 200, cutY);
+            doc.line(10, y + 2, 200, y + 2);
             doc.setLineDashPattern([], 0);
             doc.setDrawColor(0, 0, 0);
+            y += 8;
         });
     });
 
