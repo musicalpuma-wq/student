@@ -1,13 +1,15 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { DataStore } from '../services/DataStore';
-import { Plus, Calendar, FileText, UserSquare2, ChevronLeft, Save, ArrowUpDown, Mail, GripVertical, Edit2, ArrowRight, Trash2, AlertTriangle, KeyRound, Lock, Unlock, Copy } from 'lucide-react';
+import { Plus, Calendar, FileText, UserSquare2, ChevronLeft, Save, ArrowUpDown, Mail, GripVertical, Edit2, ArrowRight, Trash2, AlertTriangle, KeyRound, Lock, Unlock, Copy, RefreshCw } from 'lucide-react';
 import { GenericModal } from '../components/GenericModal';
 import { useSettings } from '../context/SettingsContext';
 
 export function CourseGradebook() {
   const { courseId } = useParams();
-  const { t, settings: { currentPeriod = '1' } = {} } = useSettings();
+  const { t, settings } = useSettings();
+  const currentPeriod = settings?.currentPeriod || '1';
+  const subjectName = settings?.subject || '';
   const [students, setStudents] = useState([]);
   const [activities, setActivities] = useState([]);
   const [materials, setMaterials] = useState([]); // [{id, name}]
@@ -25,6 +27,13 @@ export function CourseGradebook() {
   const [newCourseName, setNewCourseName] = useState('');
   const [editingActivity, setEditingActivity] = useState(null);
   const [focusedStudentId, setFocusedStudentId] = useState(null);
+
+  // Cache for late arrival times: { "studentId_date": "HH:MM" }
+  const [lateTimes, setLateTimes] = useState(() => {
+    try {
+      return JSON.parse(localStorage.getItem('sms_late_times') || '{}');
+    } catch { return {}; }
+  });
 
 
   
@@ -527,18 +536,93 @@ export function CourseGradebook() {
     if (currentStatus === 'present') nextStatus = 'absent';
     else if (currentStatus === 'absent') nextStatus = 'late';
     else if (currentStatus === 'late') nextStatus = undefined;
-    
+
     const periodAttendance = { ...(student.attendance?.[currentPeriod] || {}) };
     const updatedStudent = { ...student, attendance: { ...(student.attendance || {}), [currentPeriod]: periodAttendance } };
-    
+
     if (nextStatus) {
         updatedStudent.attendance[currentPeriod][date] = nextStatus;
     } else {
         delete updatedStudent.attendance[currentPeriod][date];
     }
 
+    // Cache time when marking as late
+    const lateKey = `${student.id}_${date}`;
+    if (nextStatus === 'late') {
+        const now = new Date();
+        const timeStr = now.toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit', hour12: true });
+        setLateTimes(prev => {
+            const updated = { ...prev, [lateKey]: timeStr };
+            localStorage.setItem('sms_late_times', JSON.stringify(updated));
+            return updated;
+        });
+    } else {
+        // Clear cached time if status changed away from late
+        setLateTimes(prev => {
+            const updated = { ...prev };
+            delete updated[lateKey];
+            localStorage.setItem('sms_late_times', JSON.stringify(updated));
+            return updated;
+        });
+    }
+
     DataStore.updateStudent(updatedStudent);
     setStudents(prev => prev.map(s => s.id === student.id ? updatedStudent : s));
+  };
+
+  // --- Sync Attendance to Observer ---
+  const syncAttendanceToObserver = (date) => {
+    const today = date;
+    let syncCount = 0;
+
+    const updatedStudents = students.map(s => {
+        const status = s.attendance?.[currentPeriod]?.[today];
+        if (status !== 'absent' && status !== 'late') return s;
+
+        const annotations = [...(s.annotations?.[currentPeriod] || [])];
+        let noteText = '';
+
+        if (status === 'absent') {
+            noteText = `[${today}] Falla a clase de ${subjectName || 'la asignatura'}`;
+        } else if (status === 'late') {
+            const lateKey = `${s.id}_${today}`;
+            const time = lateTimes[lateKey];
+            noteText = time
+                ? `[${today}] Llegada tarde a clase de ${subjectName || 'la asignatura'} — Hora de llegada: ${time}`
+                : `[${today}] Llegada tarde a clase de ${subjectName || 'la asignatura'}`;
+        }
+
+        // Avoid duplicate: check if an identical sync note already exists for this date+status
+        const alreadyExists = annotations.some(n => n === noteText);
+        if (alreadyExists) return s;
+
+        // Remove any previous sync note for this date (in case status changed from absent to late)
+        const filtered = annotations.filter(n => {
+            if (!n.startsWith(`[${today}]`)) return true;
+            if (n.includes('Falla a clase de') || n.includes('Llegada tarde a clase de')) return false;
+            return true;
+        });
+
+        filtered.push(noteText);
+        syncCount++;
+
+        const updatedAnnotations = { ...(s.annotations || {}), [currentPeriod]: filtered };
+        const updatedStudent = { ...s, annotations: updatedAnnotations };
+        DataStore.updateStudent(updatedStudent);
+        return updatedStudent;
+    });
+
+    setStudents(updatedStudents);
+
+    showModal({
+        type: 'alert',
+        title: 'Sinc. Obs',
+        message: syncCount > 0
+            ? `Se sincronizaron ${syncCount} anotación(es) al observador para la fecha ${today}.`
+            : `No hay fallas ni retardos para sincronizar en la fecha ${today}.`,
+        onConfirm: closeModal,
+        onCancel: closeModal
+    });
   };
 
   const handleVPSChange = (student, newVPS) => {
@@ -1180,22 +1264,44 @@ export function CourseGradebook() {
                                 <th key={date} style={{ textAlign: 'center', minWidth: '80px' }}>
                                     <div style={{ fontSize: '0.8rem', color: 'var(--color-text-primary)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
                                         {date.split('-').slice(1).join('/')}
-                                        <button 
-                                            onClick={() => handleDeleteAttendance(date)}
-                                            style={{ 
-                                                background: 'none', 
-                                                border: 'none', 
-                                                cursor: 'pointer', 
-                                                color: 'var(--color-danger)', 
-                                                padding: '2px',
-                                                display: 'flex',
-                                                alignItems: 'center',
-                                                justifyContent: 'center'
-                                            }}
-                                            title={`Delete attendance for ${date}`}
-                                        >
-                                            <Trash2 size={12} />
-                                        </button>
+                                        <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                                            <button
+                                                onClick={() => syncAttendanceToObserver(date)}
+                                                style={{
+                                                    background: 'var(--color-accent)',
+                                                    border: 'none',
+                                                    cursor: 'pointer',
+                                                    color: 'white',
+                                                    padding: '2px 5px',
+                                                    borderRadius: '4px',
+                                                    fontSize: '0.65rem',
+                                                    fontWeight: 600,
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    gap: '3px'
+                                                }}
+                                                title={`Sincronizar fallas y retardos del ${date} al observador`}
+                                            >
+                                                <RefreshCw size={10} />
+                                                Sinc.
+                                            </button>
+                                            <button
+                                                onClick={() => handleDeleteAttendance(date)}
+                                                style={{
+                                                    background: 'none',
+                                                    border: 'none',
+                                                    cursor: 'pointer',
+                                                    color: 'var(--color-danger)',
+                                                    padding: '2px',
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    justifyContent: 'center'
+                                                }}
+                                                title={`Delete attendance for ${date}`}
+                                            >
+                                                <Trash2 size={12} />
+                                            </button>
+                                        </div>
                                     </div>
                                 </th>
                             ))}
