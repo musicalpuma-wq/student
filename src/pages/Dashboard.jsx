@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { DataStore } from '../services/DataStore';
 import { Link, useNavigate } from 'react-router-dom';
-import { Plus, BookOpen, Clock, User, UserSquare2, FileText, ChevronRight } from 'lucide-react';
+import { Plus, BookOpen, Clock, User, UserSquare2, FileText, ChevronRight, Filter } from 'lucide-react';
 import { useSettings } from '../context/SettingsContext';
 
 export function Dashboard() {
@@ -13,6 +13,29 @@ export function Dashboard() {
   const [searchResults, setSearchResults] = useState([]);
   const [showEmojis, setShowEmojis] = useState(true);
   const [emojiSize, setEmojiSize] = useState(42);
+  // Courses hidden from the performance chart, persisted per period: { [period]: [courseName] }
+  const [hiddenChartCourses, setHiddenChartCourses] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('sms_perf_chart_hidden') || '{}'); } catch { return {}; }
+  });
+  const [showCourseFilter, setShowCourseFilter] = useState(false);
+  const currentPeriod = settings?.currentPeriod || '1';
+  const hiddenForPeriod = hiddenChartCourses[currentPeriod] || [];
+  const visibleCourses = courses.filter(c => !hiddenForPeriod.includes(c));
+
+  const updateHiddenForPeriod = (hidden) => {
+      const next = { ...hiddenChartCourses, [currentPeriod]: hidden };
+      setHiddenChartCourses(next);
+      localStorage.setItem('sms_perf_chart_hidden', JSON.stringify(next));
+  };
+
+  const toggleChartCourse = (course) => {
+      updateHiddenForPeriod(
+          hiddenForPeriod.includes(course)
+              ? hiddenForPeriod.filter(c => c !== course)
+              : [...hiddenForPeriod, course]
+      );
+  };
+
   // Create Course State
   const [showCreateCourseModal, setShowCreateCourseModal] = useState(false);
   const [newCourseGrade, setNewCourseGrade] = useState('');
@@ -214,7 +237,49 @@ export function Dashboard() {
           <div className="card" style={{ marginBottom: '3rem', padding: '2rem' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '1rem' }}>
                   <h3 style={{ fontSize: '1.2rem', margin: 0, color: 'var(--color-text-primary)' }}>{t('coursePerformance')}</h3>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem', background: 'var(--color-bg-secondary)', padding: '0.6rem 1.2rem', borderRadius: '8px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem', background: 'var(--color-bg-secondary)', padding: '0.6rem 1.2rem', borderRadius: '8px', position: 'relative' }}>
+                      <button
+                          onClick={() => setShowCourseFilter(v => !v)}
+                          style={{
+                              display: 'flex', alignItems: 'center', gap: '0.4rem',
+                              background: 'none', border: 'none', cursor: 'pointer',
+                              fontSize: '0.9rem', fontWeight: 500, fontFamily: 'inherit',
+                              color: hiddenForPeriod.length > 0 ? 'var(--color-accent)' : 'inherit'
+                          }}
+                      >
+                          <Filter size={16} />
+                          {t('courseLabel')} ({visibleCourses.length}/{courses.length})
+                      </button>
+                      {showCourseFilter && (
+                          <>
+                              <div
+                                  onClick={() => setShowCourseFilter(false)}
+                                  style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 19 }}
+                              />
+                              <div style={{
+                                  position: 'absolute', top: 'calc(100% + 6px)', right: 0, zIndex: 20,
+                                  background: 'var(--color-bg-card)', border: '1px solid var(--color-border)',
+                                  borderRadius: '8px', boxShadow: '0 8px 24px rgba(0,0,0,0.15)',
+                                  padding: '0.8rem', minWidth: '200px', maxHeight: '300px', overflowY: 'auto'
+                              }}>
+                                  <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.6rem' }}>
+                                      <button className="btn btn-secondary" style={{ padding: '0.2rem 0.6rem', fontSize: '0.8rem' }} onClick={() => updateHiddenForPeriod([])}>{t('selectAll')}</button>
+                                      <button className="btn btn-secondary" style={{ padding: '0.2rem 0.6rem', fontSize: '0.8rem' }} onClick={() => updateHiddenForPeriod([...courses])}>{t('selectNone')}</button>
+                                  </div>
+                                  {courses.map(c => (
+                                      <label key={c} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.3rem 0', fontSize: '0.9rem', cursor: 'pointer', fontWeight: 500 }}>
+                                          <input
+                                              type="checkbox"
+                                              checked={!hiddenForPeriod.includes(c)}
+                                              onChange={() => toggleChartCourse(c)}
+                                              style={{ width: '16px', height: '16px', cursor: 'pointer', accentColor: 'var(--color-accent)' }}
+                                          />
+                                          {c}
+                                      </label>
+                                  ))}
+                              </div>
+                          </>
+                      )}
                       <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.9rem', cursor: 'pointer', fontWeight: 500 }}>
                           <input 
                               type="checkbox" 
@@ -247,7 +312,12 @@ export function Dashboard() {
                   borderBottom: '1px solid var(--color-border)',
                   paddingTop: '2rem'
               }}>
-                  {courses.map((course, idx) => {
+                  {visibleCourses.length === 0 && (
+                      <div style={{ width: '100%', textAlign: 'center', color: 'var(--color-text-secondary)', alignSelf: 'center' }}>
+                          {t('noCoursesSelected')}
+                      </div>
+                  )}
+                  {visibleCourses.map((course, idx) => {
                       const stats = calculateCourseStats(course);
                       const avg = parseFloat(stats.avg);
                       // Scale: 1.0 to 5.0
