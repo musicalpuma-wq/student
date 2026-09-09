@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { NavLink } from 'react-router-dom';
-import { LayoutDashboard, Users, FileSpreadsheet, Settings, Download, CloudUpload, GraduationCap } from 'lucide-react';
+import { LayoutDashboard, Users, FileSpreadsheet, Settings, Download, CloudUpload, GraduationCap, BarChart3 } from 'lucide-react';
 import { SettingsModal } from './SettingsModal';
 import { useSettings } from '../context/SettingsContext';
 import { useGlobalModal } from '../context/GlobalModalContext';
@@ -15,6 +15,7 @@ export function Sidebar() {
   const navItems = [
     { icon: LayoutDashboard, label: t('dashboard'), path: '/' },
     { icon: Users, label: t('students'), path: '/register' },
+    { icon: BarChart3, label: t('statistics'), path: '/statistics' },
     // { icon: FileSpreadsheet, label: 'Reports', path: '/reports' },
   ];
 

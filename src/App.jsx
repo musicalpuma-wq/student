@@ -5,6 +5,7 @@ import { Dashboard } from './pages/Dashboard';
 import { StudentRegistration } from './pages/StudentRegistration';
 import { CourseGradebook } from './pages/CourseGradebook';
 import { Downloads } from './pages/Downloads';
+import { Statistics } from './pages/Statistics';
 import { Login } from './pages/Login';
 import { SettingsProvider } from './context/SettingsContext';
 import { GlobalModalProvider } from './context/GlobalModalContext';
@@ -29,6 +30,7 @@ function App() {
                 <Route index element={<Dashboard />} />
                 <Route path="register" element={<StudentRegistration />} />
                 <Route path="course/:courseId" element={<CourseGradebook />} />
+                <Route path="statistics" element={<Statistics />} />
                 <Route path="downloads" element={<Downloads />} />
               </Route>
             </Routes>
