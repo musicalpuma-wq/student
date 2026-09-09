@@ -1209,7 +1209,7 @@ export function CourseGradebook() {
                                             }}
                                             disabled={act.locked}
                                             readOnly={act.locked}
-                                            title={act.locked ? "This column is locked." : ""}
+                                            title={act.locked ? `${act.name} — This column is locked.` : act.name}
                                         />
                                     </div>
                                 </td>
