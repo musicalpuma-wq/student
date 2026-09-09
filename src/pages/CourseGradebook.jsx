@@ -772,6 +772,30 @@ export function CourseGradebook() {
                 )}
             </div>
         </div>
+
+        {/* Quick Course Access */}
+        <div style={{ marginLeft: 'auto', minWidth: '200px' }}>
+            <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: 'var(--color-text-secondary)', marginBottom: '0.5rem' }}>
+                {t('quickAccess')}
+            </label>
+            <select
+                value={courseId}
+                onChange={(e) => {
+                    if (e.target.value && e.target.value !== courseId) navigate(`/course/${e.target.value}`);
+                }}
+                style={{
+                    width: '100%',
+                    padding: '0.6rem',
+                    borderRadius: '8px',
+                    border: '1px solid var(--color-border)',
+                    fontSize: '0.9rem',
+                    background: 'white',
+                    cursor: 'pointer'
+                }}
+            >
+                {DataStore.getCourses().map(c => <option key={c} value={c}>{c}</option>)}
+            </select>
+        </div>
       </div>
       
       {/* Edit Course Modal */}
