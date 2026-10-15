@@ -224,3 +224,114 @@ th {
   animation: bounce-fail 2s infinite ease-in-out;
   filter: drop-shadow(0 4px 6px rgba(0,0,0,0.1));
 }
+
+/* ============================================
+   Cyberpunk Theme — neon palette, glow effects
+   and livelier hover animations
+   ============================================ */
+:root[data-theme='cyberpunk'] {
+  --color-bg-body: #0b0218;
+  --color-bg-card: #1b0633;
+  --color-text-primary: #eaf6ff;
+  --color-text-secondary: #a79bca;
+  --color-accent: #00f0ff;
+  --color-accent-hover: #6ff7ff;
+  --color-border: #4b2a85;
+  --color-success: #39ff6a;
+  --color-warning: #f9f002;
+  --color-danger: #ff2a6d;
+
+  --shadow-sm: 0 0 6px rgba(0, 240, 255, 0.18), 0 2px 8px rgba(0, 0, 0, 0.6);
+  --shadow-md: 0 0 14px rgba(0, 240, 255, 0.28), 0 6px 16px rgba(0, 0, 0, 0.6);
+  --shadow-lg: 0 0 26px rgba(0, 240, 255, 0.35), 0 12px 28px rgba(0, 0, 0, 0.65);
+}
+
+:root[data-theme='cyberpunk'] body {
+  background: radial-gradient(circle at 50% -10%, #2a0a52 0%, var(--color-bg-body) 55%) fixed;
+}
+
+:root[data-theme='cyberpunk'] ::selection {
+  background: rgba(0, 240, 255, 0.35);
+  color: #ffffff;
+}
+
+/* Cards: neon rim, stronger glow on hover; clickable cards also lift */
+:root[data-theme='cyberpunk'] .card {
+  border: 1px solid var(--color-border);
+  box-shadow: var(--shadow-sm);
+  transition: box-shadow var(--transition-normal), transform var(--transition-normal), border-color var(--transition-normal), background-color 0.3s ease;
+}
+
+:root[data-theme='cyberpunk'] .card:hover {
+  border-color: var(--color-accent);
+  box-shadow: 0 0 22px rgba(0, 240, 255, 0.35), 0 10px 24px rgba(0, 0, 0, 0.6);
+}
+
+:root[data-theme='cyberpunk'] a .card:hover {
+  transform: translateY(-4px);
+}
+
+/* Buttons: solid neon with dark text and glow */
+:root[data-theme='cyberpunk'] .btn {
+  color: #08131a;
+  font-weight: 600;
+  box-shadow: 0 0 10px rgba(0, 240, 255, 0.45);
+}
+
+:root[data-theme='cyberpunk'] .btn:hover {
+  background-color: var(--color-accent-hover);
+  box-shadow: 0 0 22px rgba(0, 240, 255, 0.8);
+  transform: translateY(-2px) scale(1.04);
+}
+
+:root[data-theme='cyberpunk'] .btn:active {
+  transform: translateY(0) scale(0.98);
+}
+
+:root[data-theme='cyberpunk'] .btn-secondary {
+  background: rgba(0, 240, 255, 0.06);
+  color: var(--color-accent);
+  border: 1px solid var(--color-accent);
+  box-shadow: inset 0 0 8px rgba(0, 240, 255, 0.15);
+}
+
+:root[data-theme='cyberpunk'] .btn-secondary:hover {
+  background: rgba(0, 240, 255, 0.16);
+  box-shadow: 0 0 18px rgba(0, 240, 255, 0.5);
+  transform: translateY(-2px);
+}
+
+/* Inputs: neon focus ring */
+:root[data-theme='cyberpunk'] .input-field:focus {
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 3px rgba(0, 240, 255, 0.25), 0 0 14px rgba(0, 240, 255, 0.35);
+}
+
+/* Headings and links get a neon glow */
+:root[data-theme='cyberpunk'] h1,
+:root[data-theme='cyberpunk'] h2,
+:root[data-theme='cyberpunk'] h3 {
+  text-shadow: 0 0 14px rgba(0, 240, 255, 0.35);
+}
+
+:root[data-theme='cyberpunk'] a {
+  transition: text-shadow var(--transition-fast);
+}
+
+:root[data-theme='cyberpunk'] a:hover {
+  text-shadow: 0 0 12px rgba(0, 240, 255, 0.65);
+}
+
+/* Table rows light up on hover */
+:root[data-theme='cyberpunk'] tbody tr {
+  transition: background-color var(--transition-fast);
+}
+
+:root[data-theme='cyberpunk'] tbody tr:hover {
+  background: rgba(0, 240, 255, 0.07);
+}
+
+:root[data-theme='cyberpunk'] .glass {
+  background: rgba(27, 6, 51, 0.75);
+  border: 1px solid rgba(0, 240, 255, 0.25);
+}

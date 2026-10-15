@@ -19,8 +19,11 @@ export function Dashboard() {
   });
   const [showCourseFilter, setShowCourseFilter] = useState(false);
   const currentPeriod = settings?.currentPeriod || '1';
+  // Courses hidden from the whole Dashboard (Settings > Display), per period
+  const dashboardHiddenForPeriod = settings.dashboardHidden?.[currentPeriod] || [];
+  const dashboardCourses = courses.filter(c => !dashboardHiddenForPeriod.includes(c));
   const hiddenForPeriod = hiddenChartCourses[currentPeriod] || [];
-  const visibleCourses = courses.filter(c => !hiddenForPeriod.includes(c));
+  const visibleCourses = dashboardCourses.filter(c => !hiddenForPeriod.includes(c));
 
   const updateHiddenForPeriod = (hidden) => {
       const next = { ...hiddenChartCourses, [currentPeriod]: hidden };
@@ -153,7 +156,7 @@ export function Dashboard() {
                     defaultValue=""
                 >
                     <option value="" disabled>Select Course...</option>
-                    {courses.map(c => <option key={c} value={c}>{c}</option>)}
+                    {dashboardCourses.map(c => <option key={c} value={c}>{c}</option>)}
                 </select>
              </div>
 
@@ -233,7 +236,7 @@ export function Dashboard() {
       </div>
       
       {/* Performance Chart */ }
-      {courses.length > 0 && (
+      {dashboardCourses.length > 0 && (
           <div className="card" style={{ marginBottom: '3rem', padding: '2rem' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '1rem' }}>
                   <h3 style={{ fontSize: '1.2rem', margin: 0, color: 'var(--color-text-primary)' }}>{t('coursePerformance')}</h3>
@@ -248,7 +251,7 @@ export function Dashboard() {
                           }}
                       >
                           <Filter size={16} />
-                          {t('courseLabel')} ({visibleCourses.length}/{courses.length})
+                          {t('courseLabel')} ({visibleCourses.length}/{dashboardCourses.length})
                       </button>
                       {showCourseFilter && (
                           <>
@@ -264,9 +267,9 @@ export function Dashboard() {
                               }}>
                                   <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.6rem' }}>
                                       <button className="btn btn-secondary" style={{ padding: '0.2rem 0.6rem', fontSize: '0.8rem' }} onClick={() => updateHiddenForPeriod([])}>{t('selectAll')}</button>
-                                      <button className="btn btn-secondary" style={{ padding: '0.2rem 0.6rem', fontSize: '0.8rem' }} onClick={() => updateHiddenForPeriod([...courses])}>{t('selectNone')}</button>
+                                      <button className="btn btn-secondary" style={{ padding: '0.2rem 0.6rem', fontSize: '0.8rem' }} onClick={() => updateHiddenForPeriod([...dashboardCourses])}>{t('selectNone')}</button>
                                   </div>
-                                  {courses.map(c => (
+                                  {dashboardCourses.map(c => (
                                       <label key={c} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.3rem 0', fontSize: '0.9rem', cursor: 'pointer', fontWeight: 500 }}>
                                           <input
                                               type="checkbox"
@@ -434,7 +437,7 @@ export function Dashboard() {
         gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', 
         gap: '1.5rem' 
       }}>
-        {courses.map(course => {
+        {dashboardCourses.map(course => {
             const studentCount = DataStore.getStudentsByCourse(course).length;
             const { avg, failing } = calculateCourseStats(course);
             const numAvg = parseFloat(avg);
@@ -549,6 +552,12 @@ export function Dashboard() {
             )
         })}
         
+        {courses.length > 0 && dashboardCourses.length === 0 && (
+          <div className="card" style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '3rem' }}>
+            <p style={{ color: 'var(--color-text-secondary)' }}>{t('allCoursesHidden')}</p>
+          </div>
+        )}
+
         {courses.length === 0 && (
           <div className="card" style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '4rem' }}>
             <p style={{ color: 'var(--color-text-secondary)' }}>No courses found. Add a student to create a course.</p>

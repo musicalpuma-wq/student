@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { useSettings } from '../context/SettingsContext';
 import { useGlobalModal } from '../context/GlobalModalContext';
-import { X, Moon, Sun, Monitor, Type, User, Book, Globe, Lock } from 'lucide-react';
+import { DataStore } from '../services/DataStore';
+import { X, Moon, Sun, Monitor, Type, User, Book, Globe, Lock, Zap } from 'lucide-react';
 
 export function SettingsModal({ onClose }) {
   const { settings, updateSettings, currentTheme, t } = useSettings();
@@ -10,6 +11,23 @@ export function SettingsModal({ onClose }) {
   
   // Local state for password change (simple version)
   const [passwordData, setPasswordData] = useState({ current: '', new: '', confirm: '' });
+
+  // Dashboard course visibility (per active period). Hidden courses are not deleted.
+  const allCourses = DataStore.getCourses();
+  const currentPeriod = settings.currentPeriod || '1';
+  const dashboardHiddenForPeriod = settings.dashboardHidden?.[currentPeriod] || [];
+
+  const updateDashboardHidden = (hidden) => {
+      updateSettings({ dashboardHidden: { ...(settings.dashboardHidden || {}), [currentPeriod]: hidden } });
+  };
+
+  const toggleDashboardCourse = (course) => {
+      updateDashboardHidden(
+          dashboardHiddenForPeriod.includes(course)
+              ? dashboardHiddenForPeriod.filter(c => c !== course)
+              : [...dashboardHiddenForPeriod, course]
+      );
+  };
 
   const handlePasswordChange = (e) => {
       e.preventDefault();
@@ -141,7 +159,7 @@ export function SettingsModal({ onClose }) {
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
                         <div>
                             <label style={{ display: 'block', marginBottom: '0.8rem', fontWeight: 500 }}>{t('theme')}</label>
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1rem' }}>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                                 <button 
                                     className={`btn ${settings.themeMode === 'light' ? '' : 'btn-secondary'}`}
                                     onClick={() => updateSettings({ themeMode: 'light' })}
@@ -164,6 +182,14 @@ export function SettingsModal({ onClose }) {
                                 >
                                     <Monitor size={16} style={{ marginRight: '6px' }} /> {t('themeAuto')}
                                 </button>
+                                <button
+                                    className={`btn ${settings.themeMode === 'cyberpunk' ? '' : 'btn-secondary'}`}
+                                    onClick={() => updateSettings({ themeMode: 'cyberpunk' })}
+                                    title="Cyberpunk: neon glow theme"
+                                    style={{ justifyContent: 'center' }}
+                                >
+                                    <Zap size={16} style={{ marginRight: '6px' }} /> {t('themeCyberpunk')}
+                                </button>
                             </div>
                         </div>
                         
@@ -184,6 +210,30 @@ export function SettingsModal({ onClose }) {
                             </div>
                             <div style={{ textAlign: 'center', marginTop: '0.5rem', fontSize: '0.9rem', color: 'var(--color-text-secondary)' }}>
                                 {t(`fs${settings.fontSize.charAt(0).toUpperCase() + settings.fontSize.slice(1)}`)}
+                            </div>
+                        </div>
+
+                        <div>
+                            <label style={{ display: 'block', marginBottom: '0.3rem', fontWeight: 500 }}>{t('dashboardCourses')}</label>
+                            <p style={{ margin: '0 0 0.8rem', fontSize: '0.85rem', color: 'var(--color-text-secondary)' }}>
+                                {t('dashboardCoursesNote')}: {t('period')} {currentPeriod}
+                            </p>
+                            <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.6rem' }}>
+                                <button className="btn btn-secondary" style={{ padding: '0.2rem 0.6rem', fontSize: '0.8rem' }} onClick={() => updateDashboardHidden([])}>{t('selectAll')}</button>
+                                <button className="btn btn-secondary" style={{ padding: '0.2rem 0.6rem', fontSize: '0.8rem' }} onClick={() => updateDashboardHidden([...allCourses])}>{t('selectNone')}</button>
+                            </div>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.2rem 1rem', maxHeight: '180px', overflowY: 'auto', background: 'var(--color-bg-secondary)', padding: '0.8rem', borderRadius: '8px' }}>
+                                {allCourses.map(c => (
+                                    <label key={c} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.2rem 0', fontSize: '0.9rem', cursor: 'pointer', fontWeight: 500 }}>
+                                        <input
+                                            type="checkbox"
+                                            checked={!dashboardHiddenForPeriod.includes(c)}
+                                            onChange={() => toggleDashboardCourse(c)}
+                                            style={{ width: '16px', height: '16px', cursor: 'pointer', accentColor: 'var(--color-accent)' }}
+                                        />
+                                        {c}
+                                    </label>
+                                ))}
                             </div>
                         </div>
                     </div>

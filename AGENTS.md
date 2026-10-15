@@ -82,10 +82,17 @@ src/
                             checkboxes: averages, pass rate, best/low
                             students, hardest/easiest activities, distribution
     Downloads.jsx           PDF report download center
+    Tools.jsx               Classroom tools: timer (quick-set 5/10/15 min,
+                            visual + sound alarm), metronome (60/90/120 BPM
+                            presets, time signatures 2/4, 3/4, 4/4 and custom
+                            n/m with compound-meter accents), tone generator
+                            (chromatic scale, custom Hz, dedicated A440).
+                            All sound uses the Web Audio API; no audio assets.
   components/
     Layout.jsx              Shell with Sidebar + <Outlet/>
     Sidebar.jsx             Nav, backup download/restore, settings entry
-    SettingsModal.jsx       Teacher name, subject, language, theme, period
+    SettingsModal.jsx       Teacher name, subject, language, theme, font size,
+                            Dashboard course visibility (per period)
     GenericModal.jsx        Reusable alert/confirm/prompt modal
   context/
     SettingsContext.jsx     Settings state, theme application, t() translator
@@ -103,7 +110,8 @@ src/
 
 Routes live in `src/App.jsx`: `/` (Dashboard), `/register`
 (StudentRegistration), `/course/:courseId` (CourseGradebook), `/statistics`
-(Statistics), `/downloads` (Downloads). All are wrapped in `Layout`. If
+(Statistics), `/tools` (Tools), `/downloads` (Downloads). All are wrapped in
+`Layout`. If
 `isAuthenticated` is false, only `Login` renders — auth is **in-memory
 only**, so a page reload logs the user out (this is intentional; see the
 comment in `App.jsx`).
@@ -145,10 +153,16 @@ Key conventions:
 - IDs are generated with `crypto.randomUUID()`.
 
 Other localStorage keys: `sms_settings` (teacher name, subject, language,
-themeMode, fontSize, currentPeriod), `app_password` (login password),
-`sms_late_times` (late-arrival time cache in CourseGradebook),
+themeMode, fontSize, currentPeriod, dashboardHidden), `app_password` (login
+password), `sms_late_times` (late-arrival time cache in CourseGradebook),
 `sms_perf_chart_hidden` (courses hidden from the Dashboard performance
 chart, keyed by period: `{ [period]: [courseName] }`).
+
+`settings.dashboardHidden` hides courses from the whole Dashboard (course
+cards, quick-access dropdown and performance chart) without deleting them,
+keyed by period: `{ [period]: [courseName] }`. Courses not listed are
+visible, so new courses are visible by default. Other pages (Statistics,
+Downloads, registration) always list all courses.
 
 **Backup/restore**: the Sidebar downloads the raw `sms_data_v1` JSON as
 `backup-YYYY-MM-DD-HHmm.json` and restores by overwriting that key, then
@@ -165,9 +179,13 @@ repo root.
   `useSettings()`. Spanish is the default/fallback language.
 - **Theming**: CSS custom properties in `src/index.css` (Apple-inspired
   palette). Dark mode is toggled by `data-theme="dark"` on `<html>`;
-  `themeMode: 'auto'` switches by time of day (dark 18:00–06:00). Use the
-  `var(--color-*)` variables rather than hardcoded colors. Many components use
-  inline styles referencing these variables; match that idiom.
+  `themeMode: 'auto'` switches by time of day (dark 18:00–06:00).
+  `themeMode: 'cyberpunk'` sets `data-theme="cyberpunk"`, a neon/glow
+  variant whose palette and hover effects are overrides at the end of
+  `src/index.css` (scope new cyberpunk rules under
+  `:root[data-theme='cyberpunk']`). Use the `var(--color-*)` variables
+  rather than hardcoded colors. Many components use inline styles
+  referencing these variables; match that idiom.
 - **Modals**: use `useGlobalModal()` (`showAlert`, `showConfirm`,
   `showPrompt`) instead of `window.confirm`/`alert`.
 - **Components** are named exports (`export function Foo`), one per file,

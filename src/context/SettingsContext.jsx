@@ -5,16 +5,20 @@ const SettingsContext = createContext();
 
 export function SettingsProvider({ children }) {
   // Load from localStorage or defaults
+  const defaultSettings = {
+    teacherName: 'Mauricio Herrera',
+    subject: 'Música',
+    language: 'es', // 'en' | 'es'
+    themeMode: 'auto', // 'light' | 'dark' | 'auto'
+    fontSize: 'medium', // 'small' | 'medium' | 'large'
+    currentPeriod: '1', // '1', '2', '3', '4'
+    // Courses hidden from the Dashboard (cards, quick access, chart), per period.
+    // Courses not listed here are visible; new courses are visible by default.
+    dashboardHidden: {}, // { [period]: [courseName] }
+  };
   const [settings, setSettings] = useState(() => {
     const saved = localStorage.getItem('sms_settings');
-    return saved ? JSON.parse(saved) : {
-      teacherName: 'Mauricio Herrera',
-      subject: 'Música',
-      language: 'es', // 'en' | 'es'
-      themeMode: 'auto', // 'light' | 'dark' | 'auto'
-      fontSize: 'medium', // 'small' | 'medium' | 'large'
-      currentPeriod: '1', // '1', '2', '3', '4'
-    };
+    return saved ? { ...defaultSettings, ...JSON.parse(saved) } : defaultSettings;
   });
 
   const [currentTheme, setCurrentTheme] = useState('light');
@@ -35,6 +39,8 @@ export function SettingsProvider({ children }) {
         setCurrentTheme(isNight ? 'dark' : 'light');
       } else if (settings.themeMode === 'dark') {
           setCurrentTheme('dark');
+      } else if (settings.themeMode === 'cyberpunk') {
+          setCurrentTheme('cyberpunk');
       } else {
           setCurrentTheme('light');
       }

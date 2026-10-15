@@ -1,5 +1,8 @@
 const STORAGE_KEY = 'sms_data_v1';
 
+// Numeric-aware ordering so "902-JM" comes before "1001-JM"
+const compareCourseNames = (a, b) => a.localeCompare(b, undefined, { numeric: true });
+
 const initialData = {
   students: [],
   courses: [], // Explicit list of course names
@@ -18,7 +21,7 @@ export const DataStore = {
     if (!parsed.materials) parsed.materials = {};
     if (!parsed.courseDetails) parsed.courseDetails = {};
     if (!parsed.courses) {
-        const derived = [...new Set(parsed.students.map(s => s.course))].sort();
+        const derived = [...new Set(parsed.students.map(s => s.course))].sort(compareCourseNames);
         parsed.courses = derived;
     }
     
@@ -149,7 +152,7 @@ export const DataStore = {
     // Ensure course exists in list
     if (newStudent.course && !data.courses.includes(newStudent.course)) {
         data.courses.push(newStudent.course);
-        data.courses.sort();
+        data.courses.sort(compareCourseNames);
     }
     
     DataStore.save(data);
@@ -165,7 +168,7 @@ export const DataStore = {
       // Ensure course exists (in case of move)
       if (updatedStudent.course && !data.courses.includes(updatedStudent.course)) {
           data.courses.push(updatedStudent.course);
-          data.courses.sort();
+          data.courses.sort(compareCourseNames);
       }
       
       DataStore.save(data);
@@ -190,7 +193,7 @@ export const DataStore = {
   // Courses
   getCourses: () => {
     const data = DataStore.load();
-    return data.courses || [];
+    return [...(data.courses || [])].sort(compareCourseNames);
   },
   
   getCourseDetails: (courseName) => {
@@ -206,7 +209,7 @@ export const DataStore = {
       let saved = false;
       if (!data.courses.includes(courseName)) {
           data.courses.push(courseName);
-          data.courses.sort();
+          data.courses.sort(compareCourseNames);
           saved = true;
       }
       
@@ -238,11 +241,11 @@ export const DataStore = {
     const courseIndex = data.courses.indexOf(oldName);
     if (courseIndex !== -1) {
         data.courses[courseIndex] = newName;
-        data.courses.sort();
+        data.courses.sort(compareCourseNames);
     } else {
         // Should catch this, but just add if missing
         data.courses.push(newName);
-        data.courses.sort();
+        data.courses.sort(compareCourseNames);
     }
     
     // 2. Update students

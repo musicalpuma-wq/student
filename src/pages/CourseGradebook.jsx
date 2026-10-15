@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { DataStore } from '../services/DataStore';
-import { Plus, Calendar, FileText, UserSquare2, ChevronLeft, Save, ArrowUpDown, Mail, GripVertical, Edit2, ArrowRight, Trash2, AlertTriangle, KeyRound, Lock, Unlock, Copy, RefreshCw } from 'lucide-react';
+import { Plus, Calendar, FileText, UserSquare2, ChevronLeft, Save, ArrowUpDown, Mail, GripVertical, Edit2, ArrowRight, Trash2, AlertTriangle, KeyRound, Lock, Unlock, Copy, ClipboardPaste, RefreshCw } from 'lucide-react';
 import { GenericModal } from '../components/GenericModal';
 import { useSettings } from '../context/SettingsContext';
 
@@ -483,6 +483,98 @@ export function CourseGradebook() {
               type: 'alert',
               title: 'Copied!',
               message: `Grades for "${activity.name}" have been copied to your clipboard.`,
+              onConfirm: closeModal,
+              onCancel: closeModal
+          });
+      });
+  };
+
+  const handlePasteActivityGrades = (activity) => {
+      if (activity.locked) {
+          showModal({
+              type: 'alert',
+              title: 'Column Locked',
+              message: `"${activity.name}" is locked. Unlock it before pasting grades.`,
+              onConfirm: closeModal,
+              onCancel: closeModal
+          });
+          return;
+      }
+
+      navigator.clipboard.readText().then(text => {
+          const lines = text.split(/\r?\n/);
+          // Spreadsheets usually copy a trailing newline at the end
+          while (lines.length > 0 && lines[lines.length - 1].trim() === '') lines.pop();
+
+          if (lines.length === 0) {
+              showModal({
+                  type: 'alert',
+                  title: 'Nothing to Paste',
+                  message: 'The clipboard does not contain any grades.',
+                  onConfirm: closeModal,
+                  onCancel: closeModal
+              });
+              return;
+          }
+
+          const sortedStudents = getSortedStudents();
+          if (lines.length > sortedStudents.length) {
+              showModal({
+                  type: 'alert',
+                  title: 'Too Many Rows',
+                  message: `The clipboard has ${lines.length} rows, but this course only has ${sortedStudents.length} students.`,
+                  onConfirm: closeModal,
+                  onCancel: closeModal
+              });
+              return;
+          }
+
+          // Accept comma decimals ("4,5") as they are common in Spanish-locale spreadsheets
+          const values = lines.map(line => line.trim().replace(',', '.'));
+          const invalidValues = values.filter(v => v !== '' && isNaN(Number(v)));
+          if (invalidValues.length > 0) {
+              showModal({
+                  type: 'alert',
+                  title: 'Invalid Grades',
+                  message: `These values are not valid numbers: ${invalidValues.slice(0, 3).join(', ')}${invalidValues.length > 3 ? '…' : ''}`,
+                  onConfirm: closeModal,
+                  onCancel: closeModal
+              });
+              return;
+          }
+
+          showModal({
+              type: 'confirm',
+              title: 'Paste Grades',
+              message: `Paste ${lines.length} row(s) into "${activity.name}"? The grades of the first ${lines.length} student(s) in the current list order will be overwritten (empty lines clear the grade).`,
+              onConfirm: () => {
+                  values.forEach((value, index) => {
+                      const student = sortedStudents[index];
+                      const periodGrades = { ...(student.grades?.[currentPeriod] || {}) };
+                      if (value === '') {
+                          delete periodGrades[activity.id];
+                      } else {
+                          periodGrades[activity.id] = Number(value).toFixed(1);
+                      }
+                      DataStore.updateStudent({ ...student, grades: { ...(student.grades || {}), [currentPeriod]: periodGrades } });
+                  });
+                  refreshData();
+                  closeModal();
+                  showModal({
+                      type: 'alert',
+                      title: 'Pasted!',
+                      message: `Grades have been pasted into "${activity.name}".`,
+                      onConfirm: closeModal,
+                      onCancel: closeModal
+                  });
+              },
+              onCancel: closeModal
+          });
+      }).catch(() => {
+          showModal({
+              type: 'alert',
+              title: 'Clipboard Error',
+              message: 'Could not read from the clipboard. Please allow clipboard access and try again.',
               onConfirm: closeModal,
               onCancel: closeModal
           });
@@ -1036,14 +1128,15 @@ export function CourseGradebook() {
                             >
                                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '4px', height: '100%', justifyContent: 'space-between' }}>
                                     
-                                    {/* Lock and Copy Icons */}
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%', marginBottom: '2px' }}>
-                                         <button 
+                                    {/* Lock, Copy and Paste Icons — clustered so they stay above their own
+                                        column even when the table stretches columns wide */}
+                                    <div style={{ display: 'flex', justifyContent: 'center', gap: '8px', width: '100%', marginBottom: '2px' }}>
+                                         <button
                                             onClick={(e) => { e.stopPropagation(); handleToggleLockActivity(act); }}
-                                            style={{ 
-                                                background: 'none', 
-                                                border: 'none', 
-                                                cursor: 'pointer', 
+                                            style={{
+                                                background: 'none',
+                                                border: 'none',
+                                                cursor: 'pointer',
                                                 color: act.locked ? 'var(--color-danger)' : 'var(--color-text-secondary)',
                                                 padding: '2px',
                                                 display: 'flex', alignItems: 'center', justifyContent: 'center'
@@ -1052,12 +1145,12 @@ export function CourseGradebook() {
                                         >
                                             {act.locked ? <Lock size={14} /> : <Unlock size={14} />}
                                         </button>
-                                        <button 
+                                        <button
                                             onClick={(e) => { e.stopPropagation(); handleCopyActivityGrades(act); }}
-                                            style={{ 
-                                                background: 'none', 
-                                                border: 'none', 
-                                                cursor: 'pointer', 
+                                            style={{
+                                                background: 'none',
+                                                border: 'none',
+                                                cursor: 'pointer',
                                                 color: 'var(--color-accent)',
                                                 padding: '2px',
                                                 display: 'flex', alignItems: 'center', justifyContent: 'center'
@@ -1065,6 +1158,20 @@ export function CourseGradebook() {
                                             title={`Copy grades for ${act.name}`}
                                         >
                                             <Copy size={14} />
+                                        </button>
+                                        <button
+                                            onClick={(e) => { e.stopPropagation(); handlePasteActivityGrades(act); }}
+                                            style={{
+                                                background: 'none',
+                                                border: 'none',
+                                                cursor: 'pointer',
+                                                color: 'var(--color-accent)',
+                                                padding: '2px',
+                                                display: 'flex', alignItems: 'center', justifyContent: 'center'
+                                            }}
+                                            title={act.locked ? `${act.name} is locked — unlock to paste` : `Paste grades into ${act.name}`}
+                                        >
+                                            <ClipboardPaste size={14} />
                                         </button>
                                     </div>
                                     
