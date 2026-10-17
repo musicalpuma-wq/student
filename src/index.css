@@ -167,6 +167,12 @@ th {
   appearance: textfield;
 }
 
+/* Light-gray hint showing the max allowed grade in evaluation inputs */
+.eval-hint::placeholder {
+  color: #c7c7cc;
+  opacity: 1;
+}
+
 /* Mascot Animations */
 @keyframes bar-grow {
   from { height: 0; opacity: 0; }

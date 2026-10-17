@@ -5,7 +5,7 @@ import { Plus, Calendar, FileText, UserSquare2, ChevronLeft, Save, ArrowUpDown, 
 import { GenericModal } from '../components/GenericModal';
 import { RandomPickerModal } from '../components/RandomPickerModal';
 import { useSettings } from '../context/SettingsContext';
-import { formatGradeInput, evaluationBounds, isWithinEvaluationBounds, formatBound } from '../utils/gradeUtils';
+import { formatGradeInput, evaluationBounds, isWithinEvaluationBounds, formatBound, maxEvaluationGrade } from '../utils/gradeUtils';
 
 export function CourseGradebook() {
   const { courseId } = useParams();
@@ -2509,7 +2509,8 @@ function EvaluationInput({ value, heteroStr, onCommit, onOutOfRange, onFocus, on
             step="0.1"
             max="5.0"
             min="0.0"
-            className="no-spin"
+            className="no-spin eval-hint"
+            placeholder={blocked ? undefined : maxEvaluationGrade(parseFloat(heteroStr))}
             style={{
                 width: '60px',
                 padding: '4px',

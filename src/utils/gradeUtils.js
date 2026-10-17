@@ -30,3 +30,9 @@ export const isWithinEvaluationBounds = (value, hetero) => {
 
 // Compact display for range bounds (1.5, 2.5, 3.75)
 export const formatBound = (n) => String(Number(n.toFixed(2)));
+
+// Highest grade the teacher can actually enter within the ±25% window,
+// floored to one decimal (grades are always stored as "X.Y"). Shown as a
+// placeholder hint in the evaluation inputs.
+export const maxEvaluationGrade = (hetero) =>
+    (Math.floor((evaluationBounds(hetero).max + 1e-9) * 10) / 10).toFixed(1);
