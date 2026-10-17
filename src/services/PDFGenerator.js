@@ -102,7 +102,7 @@ export const PDFGenerator = {
         const students = DataStore.getStudentsByCourse(courseId)
           .sort((a, b) => a.name.localeCompare(b.name));
 
-        const headers = ['VPS', 'Name', ...activities.map(a => a.name), 'Avg.'];
+        const headers = ['VPS', 'Name', ...activities.map(a => a.name), 'Heteroevaluación', 'Co-evaluación', 'Auto-evaluación'];
 
         const body = students.map(s => {
             const row = [
@@ -130,6 +130,8 @@ export const PDFGenerator = {
 
             const avg = count > 0 ? (sum / count).toFixed(1) : '-';
             row.push(avg);
+            row.push(s.coevaluation?.[period] || '-');
+            row.push(s.autoevaluation?.[period] || '-');
 
             return row;
         });

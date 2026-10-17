@@ -77,8 +77,15 @@ src/
     Login.jsx               Password gate
     Dashboard.jsx           Stats, course overview/creation
     StudentRegistration.jsx Student CRUD form/list
-    CourseGradebook.jsx     Core screen (~2200 lines): grades, attendance,
-                            observer (annotations), materials tabs
+    CourseGradebook.jsx     Core screen (~2400 lines): grades, attendance,
+                            observer (annotations), materials tabs. The grades
+                            table ends with Heteroevaluación (final average),
+                            Co-evaluación and Auto-evaluación columns; co/auto
+                            entries must stay within ±25% of the
+                            heteroevaluation (rejected with an alert otherwise)
+                            and are blocked while no average exists. All grade
+                            inputs accept a digit shorthand on blur: "5" ->
+                            "5.0", "45" -> "4.5" (see utils/gradeUtils.js)
     Statistics.jsx          Cross-course performance metrics with course
                             checkboxes: averages, pass rate, best/low
                             students, hardest/easiest activities, distribution
@@ -124,6 +131,8 @@ src/
     translations.js         es/en string tables
     spriteUtils.js          Mascot sprite-sheet helpers (course animal by hash)
     audioUtils.js           Shared lazy AudioContext, playBlip, formatTime
+    gradeUtils.js           Grade digit-shorthand formatter ("45" -> "4.5")
+                            and ±25% evaluation-range helpers
   assets/mascots/           PNG sprite sheets (dog, bear, fox; 5 expressions each)
 ```
 
@@ -147,7 +156,8 @@ exclusively through `src/services/DataStore.js`:
   version: 'v2',
   students: [ { id, name, course, birthDate, age, parentName, parentPhone,
                 parentPhone2, parentEmail, vpsCode, jornada,
-                grades, attendance, materials, annotations } ],
+                grades, attendance, materials, annotations,
+                coevaluation, autoevaluation } ],
   courses: [ 'CourseName', ... ],          // explicit, sorted list
   courseDetails: { courseName: { director, schedule } },
   activities: { 'period_courseName': [ { id, name, date, locked } ] },
@@ -159,7 +169,8 @@ Key conventions:
 
 - **Academic periods**: there are 4 periods (`'1'`–`'4'`). Activities and
   materials are keyed as `${period}_${courseName}`. Student-level `grades`,
-  `attendance`, `materials`, and `annotations` are objects keyed by period.
+  `attendance`, `materials`, `annotations`, `coevaluation`, and
+  `autoevaluation` are objects keyed by period.
   The active period comes from `settings.currentPeriod`.
 - **Migrations**: `DataStore.load()` transparently migrates legacy flat
   (pre-v2) data into period-scoped format and re-saves. Any change to the data

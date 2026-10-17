@@ -138,6 +138,9 @@ export const DataStore = {
       if (!s.grades) s.grades = {};
       if (!s.attendance) s.attendance = {};
       if (!s.materials) s.materials = {};
+      // Co-evaluation and self-evaluation grades, keyed by period
+      if (!s.coevaluation) s.coevaluation = {};
+      if (!s.autoevaluation) s.autoevaluation = {};
       // For version v2, annotations is a dict of lists
       if (!s.annotations) s.annotations = {}; 
       return s;

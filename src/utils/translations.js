@@ -59,7 +59,12 @@ export const translations = {
     // Grades
     vps: "VPS",
     studentName: "Nombre Estudiante",
-    finalGrade: "Definitiva",
+    heteroEvaluation: "Heteroevaluación",
+    coEvaluation: "Co-evaluación",
+    autoEvaluation: "Auto-evaluación",
+    evaluationOutOfRange: "La nota debe estar entre {min} y {max} (±25% de la Heteroevaluación {hetero}).",
+    evaluationOutOfRangeTitle: "Nota Fuera de Rango",
+    evaluationNeedsHetero: "Primero registra notas para calcular la Heteroevaluación.",
     addActivity: "Nueva Actividad",
     enterActivityName: "Nombre de la Actividad",
     
@@ -326,7 +331,12 @@ export const translations = {
     // Grades
     vps: "VPS",
     studentName: "Student Name",
-    finalGrade: "Final Grade",
+    heteroEvaluation: "Heteroevaluation",
+    coEvaluation: "Co-evaluation",
+    autoEvaluation: "Self-evaluation",
+    evaluationOutOfRange: "The grade must be between {min} and {max} (±25% of the Heteroevaluation {hetero}).",
+    evaluationOutOfRangeTitle: "Grade Out of Range",
+    evaluationNeedsHetero: "Enter grades first to calculate the Heteroevaluation.",
     addActivity: "New Activity",
     enterActivityName: "Activity Name",
     

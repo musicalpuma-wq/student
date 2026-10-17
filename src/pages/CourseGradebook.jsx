@@ -5,6 +5,7 @@ import { Plus, Calendar, FileText, UserSquare2, ChevronLeft, Save, ArrowUpDown, 
 import { GenericModal } from '../components/GenericModal';
 import { RandomPickerModal } from '../components/RandomPickerModal';
 import { useSettings } from '../context/SettingsContext';
+import { formatGradeInput, evaluationBounds, isWithinEvaluationBounds, formatBound } from '../utils/gradeUtils';
 
 export function CourseGradebook() {
   const { courseId } = useParams();
@@ -538,9 +539,12 @@ export function CourseGradebook() {
               return;
           }
 
-          // Accept comma decimals ("4,5") as they are common in Spanish-locale spreadsheets
-          const values = lines.map(line => line.trim().replace(',', '.'));
-          const invalidValues = values.filter(v => v !== '' && isNaN(Number(v)));
+          // formatGradeInput applies the digit shorthand ("45" -> "4.5"), accepts
+          // comma decimals ("4,5") and returns null for non-numeric values
+          const values = lines.map(line => formatGradeInput(line));
+          const invalidValues = lines
+              .map(line => line.trim())
+              .filter((trimmed, i) => trimmed !== '' && values[i] === null);
           if (invalidValues.length > 0) {
               showModal({
                   type: 'alert',
@@ -563,7 +567,7 @@ export function CourseGradebook() {
                       if (value === '') {
                           delete periodGrades[activity.id];
                       } else {
-                          periodGrades[activity.id] = Number(value).toFixed(1);
+                          periodGrades[activity.id] = value;
                       }
                       DataStore.updateStudent({ ...student, grades: { ...(student.grades || {}), [currentPeriod]: periodGrades } });
                   });
@@ -590,7 +594,7 @@ export function CourseGradebook() {
       });
   };
 
-  const handleCopyFinalGrades = () => {
+  const handleCopyHeteroGrades = () => {
       const sortedStudents = getSortedStudents();
       const textToCopy = sortedStudents.map(student => {
           const avg = calculateAverage(student);
@@ -601,10 +605,44 @@ export function CourseGradebook() {
           showModal({
               type: 'alert',
               title: 'Copied!',
-              message: 'Final grades have been copied to your clipboard.',
+              message: 'Heteroevaluation grades have been copied to your clipboard.',
               onConfirm: closeModal,
               onCancel: closeModal
           });
+      });
+  };
+
+  const handleCopyEvaluations = (field) => {
+      const sortedStudents = getSortedStudents();
+      const textToCopy = sortedStudents.map(student => student[field]?.[currentPeriod] || '').join('\n');
+
+      navigator.clipboard.writeText(textToCopy).then(() => {
+          showModal({
+              type: 'alert',
+              title: 'Copied!',
+              message: 'Grades have been copied to your clipboard.',
+              onConfirm: closeModal,
+              onCancel: closeModal
+          });
+      });
+  };
+
+  const handleEvaluationChange = (student, field, value) => {
+    const updatedStudent = { ...student, [field]: { ...(student[field] || {}), [currentPeriod]: value } };
+    DataStore.updateStudent(updatedStudent);
+    setStudents(prev => prev.map(s => s.id === student.id ? updatedStudent : s));
+  };
+
+  const handleEvaluationOutOfRange = ({ min, max, hetero }) => {
+      showModal({
+          type: 'alert',
+          title: t('evaluationOutOfRangeTitle'),
+          message: t('evaluationOutOfRange')
+              .replace('{min}', formatBound(min))
+              .replace('{max}', formatBound(max))
+              .replace('{hetero}', hetero),
+          onConfirm: closeModal,
+          onCancel: closeModal
       });
   };
 
@@ -1253,13 +1291,37 @@ export function CourseGradebook() {
                                 <Plus size={20} />
                             </button>
                         </th>
-                        <th style={{ width: '100px', textAlign: 'center', color: 'var(--color-text-primary)' }}>
+                        <th style={{ width: '110px', textAlign: 'center', color: 'var(--color-text-primary)' }}>
                             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
-                                {t('finalGrade')}
+                                {t('heteroEvaluation')}
                                 <button
-                                    onClick={handleCopyFinalGrades}
+                                    onClick={handleCopyHeteroGrades}
                                     style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-accent)', padding: 0, display: 'flex', alignItems: 'center' }}
-                                    title="Copy all final grades"
+                                    title="Copy all heteroevaluation grades"
+                                >
+                                    <Copy size={16} />
+                                </button>
+                            </div>
+                        </th>
+                        <th style={{ width: '110px', textAlign: 'center', color: 'var(--color-text-primary)' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+                                {t('coEvaluation')}
+                                <button
+                                    onClick={() => handleCopyEvaluations('coevaluation')}
+                                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-accent)', padding: 0, display: 'flex', alignItems: 'center' }}
+                                    title="Copy all co-evaluation grades"
+                                >
+                                    <Copy size={16} />
+                                </button>
+                            </div>
+                        </th>
+                        <th style={{ width: '110px', textAlign: 'center', color: 'var(--color-text-primary)' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+                                {t('autoEvaluation')}
+                                <button
+                                    onClick={() => handleCopyEvaluations('autoevaluation')}
+                                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-accent)', padding: 0, display: 'flex', alignItems: 'center' }}
+                                    title="Copy all self-evaluation grades"
                                 >
                                     <Copy size={16} />
                                 </button>
@@ -1359,13 +1421,10 @@ export function CourseGradebook() {
                                             onFocus={() => setFocusedStudentId(student.id)}
                                             onBlur={(e) => {
                                                 setFocusedStudentId(null);
-                                                const val = parseFloat(e.target.value);
-                                                if (!isNaN(val)) {
-                                                    // Format to 1 decimal place if it's a valid number
-                                                    const formatted = val.toFixed(1);
-                                                    if (formatted !== e.target.value) {
-                                                        handleGradeChange(student, act.id, formatted);
-                                                    }
+                                                // Digit shorthand: "5" -> "5.0", "45" -> "4.5"
+                                                const formatted = formatGradeInput(e.target.value);
+                                                if (formatted !== null && formatted !== e.target.value) {
+                                                    handleGradeChange(student, act.id, formatted);
                                                 }
                                             }}
                                             disabled={act.locked}
@@ -1377,10 +1436,32 @@ export function CourseGradebook() {
                             )})}
                             <td></td>
                             <td style={{ textAlign: 'center', fontWeight: 700, color: avgColor, padding: '4px' }}>{avgStr}</td>
+                            <td style={{ textAlign: 'center', padding: '4px' }}>
+                                <EvaluationInput
+                                    value={student.coevaluation?.[currentPeriod] || ''}
+                                    heteroStr={avgStr}
+                                    onCommit={(v) => handleEvaluationChange(student, 'coevaluation', v)}
+                                    onOutOfRange={handleEvaluationOutOfRange}
+                                    onFocus={() => setFocusedStudentId(student.id)}
+                                    onBlur={() => setFocusedStudentId(null)}
+                                    blockedTitle={t('evaluationNeedsHetero')}
+                                />
+                            </td>
+                            <td style={{ textAlign: 'center', padding: '4px' }}>
+                                <EvaluationInput
+                                    value={student.autoevaluation?.[currentPeriod] || ''}
+                                    heteroStr={avgStr}
+                                    onCommit={(v) => handleEvaluationChange(student, 'autoevaluation', v)}
+                                    onOutOfRange={handleEvaluationOutOfRange}
+                                    onFocus={() => setFocusedStudentId(student.id)}
+                                    onBlur={() => setFocusedStudentId(null)}
+                                    blockedTitle={t('evaluationNeedsHetero')}
+                                />
+                            </td>
                         </tr>
                     )})}
                     {students.length === 0 && (
-                        <tr><td colSpan={activities.length + 3} style={{textAlign: 'center', padding: '2rem'}}>No students in this course.</td></tr>
+                        <tr><td colSpan={activities.length + 7} style={{textAlign: 'center', padding: '2rem'}}>No students in this course.</td></tr>
                     )}
                 </tbody>
             </table>
@@ -2412,4 +2493,55 @@ export function CourseGradebook() {
       />
     </div>
   );
+}
+
+// Grade cell for the co-evaluation / self-evaluation columns. Keeps a local
+// draft while editing so rejected input reverts to the stored value; commits
+// through onCommit only after format and ±25% range validation. Blocked
+// (disabled) while the student has no heteroevaluation.
+function EvaluationInput({ value, heteroStr, onCommit, onOutOfRange, onFocus, onBlur, blockedTitle }) {
+    const [draft, setDraft] = useState(null);
+    const blocked = heteroStr === '-';
+
+    return (
+        <input
+            type="number"
+            step="0.1"
+            max="5.0"
+            min="0.0"
+            className="no-spin"
+            style={{
+                width: '60px',
+                padding: '4px',
+                textAlign: 'center',
+                border: '1px solid #d2d2d7',
+                borderRadius: '6px',
+                fontSize: '0.95rem',
+                fontFamily: 'var(--font-family)',
+                fontWeight: 600,
+                backgroundColor: blocked ? '#f5f5f7' : 'transparent',
+                cursor: blocked ? 'not-allowed' : 'text'
+            }}
+            value={draft !== null ? draft : value}
+            disabled={blocked}
+            readOnly={blocked}
+            title={blocked ? blockedTitle : undefined}
+            onFocus={() => { setDraft(value); onFocus?.(); }}
+            onChange={(e) => setDraft(e.target.value)}
+            onBlur={() => {
+                onBlur?.();
+                const formatted = formatGradeInput(draft ?? '');
+                setDraft(null);
+                if (formatted === null || formatted === value) return;
+                if (formatted === '') { onCommit(''); return; }
+                const hetero = parseFloat(heteroStr);
+                const num = parseFloat(formatted);
+                if (!isNaN(hetero) && !isWithinEvaluationBounds(num, hetero)) {
+                    onOutOfRange({ ...evaluationBounds(hetero), hetero: heteroStr });
+                    return;
+                }
+                onCommit(formatted);
+            }}
+        />
+    );
 }
