@@ -183,6 +183,59 @@ export const translations = {
     customHzPlaceholder: "Frecuencia en Hz (ej. 432)",
     playTone: "Reproducir",
     customTimeSig: "Libre",
+    timerMinPh: "Min",
+    timerSecPh: "Seg",
+    toneNotes: "Notas",
+    toneKeyboard: "Teclado",
+    timbre: "Timbre",
+    timbreSine: "Senoidal",
+    timbreTriangle: "Triangular",
+    timbreSquare: "Cuadrada",
+    timbreSawtooth: "Diente de sierra",
+    timbrePiano: "Piano",
+    timbreOrgan: "Órgano",
+
+    // Fullscreen
+    fullscreen: "Pantalla completa",
+    exitFullscreen: "Salir de pantalla completa",
+
+    // Sidebar
+    collapseMenu: "Contraer menú",
+    expandMenu: "Expandir menú",
+
+    // Attendance tooltip
+    attPresent: "Presente",
+    attAbsent: "Falla",
+    attLate: "Retardo",
+    attNotTaken: "Sin marcar",
+
+    // Random student picker
+    pickRandom: "Elegir al azar",
+    noRepeat: "No repetir estudiante",
+    allowRepeats: "Se aceptan repeticiones",
+    spin: "¡Girar!",
+    spinning: "Girando...",
+    resetPool: "Reiniciar lista",
+    remainingStudents: "Estudiantes restantes",
+    pickedStudent: "Estudiante elegido",
+    poolExhausted: "Ya salieron todos los estudiantes. Reinicia la lista para volver a empezar.",
+
+    // Space game
+    spaceGame: "Naves Neón",
+    gameStart: "Iniciar Juego",
+    gamePause: "Pausa",
+    gameResume: "Continuar",
+    gameRestart: "Reiniciar",
+    gameOver: "Fin del Juego",
+    gameScore: "Puntuación",
+    gameHighScore: "Máxima puntuación",
+    gamePlayAgain: "Jugar de Nuevo",
+    gameControls: "[Flechas/AD] Mover · [Espacio] Disparar · [P] Pausa",
+    gameTagline: "Defiende la red cibernética contra hordas de naves neón.",
+
+    // Floating timer
+    backToTools: "Volver a Herramientas",
+
     statisticsTitle: "Estadísticas de Desempeño",
     courseLabel: "Curso",
     coursesToAnalyze: "Cursos a analizar",
@@ -397,6 +450,59 @@ export const translations = {
     customHzPlaceholder: "Frequency in Hz (e.g. 432)",
     playTone: "Play",
     customTimeSig: "Custom",
+    timerMinPh: "Min",
+    timerSecPh: "Sec",
+    toneNotes: "Notes",
+    toneKeyboard: "Keyboard",
+    timbre: "Timbre",
+    timbreSine: "Sine",
+    timbreTriangle: "Triangle",
+    timbreSquare: "Square",
+    timbreSawtooth: "Sawtooth",
+    timbrePiano: "Piano",
+    timbreOrgan: "Organ",
+
+    // Fullscreen
+    fullscreen: "Fullscreen",
+    exitFullscreen: "Exit fullscreen",
+
+    // Sidebar
+    collapseMenu: "Collapse menu",
+    expandMenu: "Expand menu",
+
+    // Attendance tooltip
+    attPresent: "Present",
+    attAbsent: "Absent",
+    attLate: "Late",
+    attNotTaken: "Not taken",
+
+    // Random student picker
+    pickRandom: "Pick at random",
+    noRepeat: "Don't repeat students",
+    allowRepeats: "Repeats allowed",
+    spin: "Spin!",
+    spinning: "Spinning...",
+    resetPool: "Reset list",
+    remainingStudents: "Students remaining",
+    pickedStudent: "Picked student",
+    poolExhausted: "Every student has been picked. Reset the list to start over.",
+
+    // Space game
+    spaceGame: "Neon Ships",
+    gameStart: "Start Game",
+    gamePause: "Paused",
+    gameResume: "Resume",
+    gameRestart: "Restart",
+    gameOver: "Game Over",
+    gameScore: "Score",
+    gameHighScore: "High score",
+    gamePlayAgain: "Play Again",
+    gameControls: "[Arrows/AD] Move · [Space] Fire · [P] Pause",
+    gameTagline: "Defend the cyber network against hordes of neon ships.",
+
+    // Floating timer
+    backToTools: "Back to Tools",
+
     statisticsTitle: "Performance Statistics",
     courseLabel: "Course",
     coursesToAnalyze: "Courses to analyze",

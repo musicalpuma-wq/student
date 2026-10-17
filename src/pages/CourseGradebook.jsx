@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { DataStore } from '../services/DataStore';
-import { Plus, Calendar, FileText, UserSquare2, ChevronLeft, Save, ArrowUpDown, Mail, GripVertical, Edit2, ArrowRight, Trash2, AlertTriangle, KeyRound, Lock, Unlock, Copy, ClipboardPaste, RefreshCw } from 'lucide-react';
+import { Plus, Calendar, FileText, UserSquare2, ChevronLeft, Save, ArrowUpDown, Mail, GripVertical, Edit2, ArrowRight, Trash2, AlertTriangle, KeyRound, Lock, Unlock, Copy, ClipboardPaste, RefreshCw, Dices } from 'lucide-react';
 import { GenericModal } from '../components/GenericModal';
+import { RandomPickerModal } from '../components/RandomPickerModal';
 import { useSettings } from '../context/SettingsContext';
 
 export function CourseGradebook() {
@@ -27,6 +28,14 @@ export function CourseGradebook() {
   const [newCourseName, setNewCourseName] = useState('');
   const [editingActivity, setEditingActivity] = useState(null);
   const [focusedStudentId, setFocusedStudentId] = useState(null);
+
+  // Random student picker (roulette) state — kept here so the pool survives tab switches
+  const [showPicker, setShowPicker] = useState(false);
+  const [pickerMode, setPickerMode] = useState('noRepeat'); // 'noRepeat' | 'allowRepeats'
+  const [pickedIds, setPickedIds] = useState([]);
+
+  // Hover tooltip for attendance cells: { x, y, text } in viewport coordinates
+  const [attTooltip, setAttTooltip] = useState(null);
 
   // Cache for late arrival times: { "studentId_date": "HH:MM" }
   const [lateTimes, setLateTimes] = useState(() => {
@@ -881,7 +890,8 @@ export function CourseGradebook() {
                     borderRadius: '8px',
                     border: '1px solid var(--color-border)',
                     fontSize: '0.9rem',
-                    background: 'white',
+                    background: 'var(--color-bg-card)',
+                    color: 'var(--color-text-primary)',
                     cursor: 'pointer'
                 }}
             >
@@ -1032,7 +1042,7 @@ export function CourseGradebook() {
             style={{ 
                 padding: '0.6rem 1.2rem', 
                 background: activeTab === 'grades' ? 'var(--color-accent)' : 'transparent',
-                color: activeTab === 'grades' ? 'white' : 'var(--color-text-secondary)',
+                color: activeTab === 'grades' ? 'var(--color-on-accent)' : 'var(--color-text-secondary)',
                 borderRadius: '20px',
                 border: 'none',
                 fontWeight: 500,
@@ -1045,7 +1055,7 @@ export function CourseGradebook() {
             style={{ 
                 padding: '0.6rem 1.2rem', 
                 background: activeTab === 'attendance' ? 'var(--color-accent)' : 'transparent',
-                color: activeTab === 'attendance' ? 'white' : 'var(--color-text-secondary)',
+                color: activeTab === 'attendance' ? 'var(--color-on-accent)' : 'var(--color-text-secondary)',
                 borderRadius: '20px',
                 border: 'none',
                 fontWeight: 500,
@@ -1058,7 +1068,7 @@ export function CourseGradebook() {
             style={{ 
                 padding: '0.6rem 1.2rem', 
                 background: activeTab === 'observer' ? 'var(--color-accent)' : 'transparent',
-                color: activeTab === 'observer' ? 'white' : 'var(--color-text-secondary)',
+                color: activeTab === 'observer' ? 'var(--color-on-accent)' : 'var(--color-text-secondary)',
                 borderRadius: '20px',
                 border: 'none',
                 fontWeight: 500,
@@ -1071,7 +1081,7 @@ export function CourseGradebook() {
             style={{ 
                 padding: '0.6rem 1.2rem', 
                 background: activeTab === 'materials' ? 'var(--color-accent)' : 'transparent',
-                color: activeTab === 'materials' ? 'white' : 'var(--color-text-secondary)',
+                color: activeTab === 'materials' ? 'var(--color-on-accent)' : 'var(--color-text-secondary)',
                 borderRadius: '20px',
                 border: 'none',
                 fontWeight: 500,
@@ -1079,7 +1089,27 @@ export function CourseGradebook() {
             }}>
             {t('tabMaterials')}
         </button>
-        
+
+        <button
+            onClick={() => setShowPicker(true)}
+            title={t('pickRandom')}
+            style={{
+                padding: '0.6rem 1.2rem',
+                background: 'transparent',
+                color: 'var(--color-accent)',
+                borderRadius: '20px',
+                border: '1px solid var(--color-accent)',
+                fontWeight: 500,
+                cursor: 'pointer',
+                marginLeft: 'auto',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px'
+            }}>
+            <Dices size={18} />
+            {t('pickRandom')}
+        </button>
+
       </div>
 
       <div className="card" style={{ overflowX: 'auto', position: 'relative' }}>
@@ -1402,7 +1432,7 @@ export function CourseGradebook() {
                                                     background: 'var(--color-accent)',
                                                     border: 'none',
                                                     cursor: 'pointer',
-                                                    color: 'white',
+                                                    color: 'var(--color-on-accent)',
                                                     padding: '2px 5px',
                                                     borderRadius: '4px',
                                                     fontSize: '0.65rem',
@@ -1484,23 +1514,35 @@ export function CourseGradebook() {
                                    <td style={{ fontWeight: 500 }}>{student.name}</td>
                                    {dates.map(date => {
                                        const status = student.attendance?.[currentPeriod]?.[date]; // No default 'present', allow undefined
-                                       
+
                                        const dotColor = status === 'present' ? 'var(--color-success)' : status === 'absent' ? 'var(--color-danger)' : status === 'late' ? 'var(--color-warning)' : 'white';
-                                       
+
+                                       const statusLabel = status === 'present' ? t('attPresent') : status === 'absent' ? t('attAbsent') : status === 'late' ? t('attLate') : t('attNotTaken');
+                                       const lateTime = status === 'late' ? lateTimes[`${student.id}_${date}`] : null;
+
                                        return (
-                                           <td 
-                                               key={date} 
+                                           <td
+                                               key={date}
                                                style={{ textAlign: 'center', cursor: 'pointer' }}
                                                onClick={() => toggleAttendance(student, date)} // Pass date explicitly
+                                               onMouseEnter={(e) => {
+                                                   const rect = e.currentTarget.getBoundingClientRect();
+                                                   setAttTooltip({
+                                                       x: rect.left + rect.width / 2,
+                                                       y: rect.top - 8,
+                                                       text: `${date} — ${statusLabel}${lateTime ? ` · ${lateTime}` : ''}`
+                                                   });
+                                               }}
+                                               onMouseLeave={() => setAttTooltip(null)}
                                            >
-                                               <div style={{ 
-                                                   width: '12px', 
-                                                   height: '12px', 
-                                                   borderRadius: '50%', 
+                                               <div style={{
+                                                   width: '12px',
+                                                   height: '12px',
+                                                   borderRadius: '50%',
                                                    background: dotColor,
                                                    border: !status ? '1px solid #ccc' : 'none',
                                                    margin: '0 auto'
-                                               }} title={status || 'Not Taken'} />
+                                               }} />
                                            </td>
                                        );
                                    })}
@@ -1800,7 +1842,7 @@ export function CourseGradebook() {
                             onChange={e => setEditingActivity({...editingActivity, date: e.target.value})}
                         />
                     </div>
-                    <div style={{ marginBottom: '1.5rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.8rem', background: '#f5f5f7', borderRadius: '8px' }}>
+                    <div style={{ marginBottom: '1.5rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.8rem', background: 'var(--color-bg-body)', borderRadius: '8px' }}>
                         <div style={{ display: 'flex', flexDirection: 'column' }}>
                             <span style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--color-text-primary)' }}>Promediar Actividad</span>
                             <span style={{ fontSize: '0.75rem', color: 'var(--color-text-secondary)' }}>
@@ -2042,7 +2084,7 @@ export function CourseGradebook() {
                                      value={viewingStudent.jornada || 'Mañana'} 
                                      onChange={e => setViewingStudent({...viewingStudent, jornada: e.target.value})}
                                      disabled // Locked
-                                     style={{ backgroundColor: '#f5f5f7', color: '#888' }}
+                                     style={{ backgroundColor: 'var(--color-bg-body)', color: '#888' }}
                                  >
                                      <option value="Mañana">Mañana</option>
                                      <option value="Tarde">Tarde</option>
@@ -2154,7 +2196,7 @@ export function CourseGradebook() {
                         {viewingStudent.genericObs && (
                             <div>
                                 <label style={{ fontSize: '0.85rem', color: 'var(--color-text-secondary)', fontWeight: 600 }}>GENERAL OBSERVATIONS</label>
-                                <p style={{ margin: 0, fontStyle: 'italic', background: '#f9f9f9', padding: '0.5rem', borderRadius: '6px' }}>
+                                <p style={{ margin: 0, fontStyle: 'italic', background: 'var(--color-bg-body)', padding: '0.5rem', borderRadius: '6px' }}>
                                     {viewingStudent.genericObs}
                                 </p>
                             </div>
@@ -2175,7 +2217,7 @@ export function CourseGradebook() {
           position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
           backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000
         }}>
-          <div style={{ background: 'white', padding: '2rem', borderRadius: '12px', width: '90%', maxWidth: '400px' }}>
+          <div style={{ background: 'var(--color-bg-card)', color: 'var(--color-text-primary)', padding: '2rem', borderRadius: '12px', width: '90%', maxWidth: '400px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '1rem', color: 'var(--color-text-primary)' }}>
                <KeyRound size={24} />
                <h3 style={{ margin: 0 }}>Security Check</h3>
@@ -2237,7 +2279,7 @@ export function CourseGradebook() {
                 </p>
 
                 <div style={{ 
-                    background: '#f5f5f7', 
+                    background: 'var(--color-bg-body)', 
                     padding: '1rem', 
                     borderRadius: '8px', 
                     marginBottom: '1.5rem',
@@ -2308,7 +2350,7 @@ export function CourseGradebook() {
         }}>
             <div className="card" style={{ width: '350px', padding: '2rem' }}>
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '1.5rem' }}>
-                    <div style={{ background: '#f5f5f7', padding: '1rem', borderRadius: '50%', marginBottom: '1rem' }}>
+                    <div style={{ background: 'var(--color-bg-body)', padding: '1rem', borderRadius: '50%', marginBottom: '1rem' }}>
                         <KeyRound size={32} color="var(--color-text-secondary)" />
                     </div>
                     <h3 style={{ margin: 0 }}>Security Check</h3>
@@ -2339,6 +2381,25 @@ export function CourseGradebook() {
         </div>
       )}
       
+      {/* Attendance hover tooltip (fixed position, follows the hovered cell) */}
+      {attTooltip && (
+          <div className="att-tooltip" style={{ left: attTooltip.x, top: attTooltip.y }}>
+              {attTooltip.text}
+          </div>
+      )}
+
+      {/* Random student picker (roulette) */}
+      {showPicker && (
+          <RandomPickerModal
+              students={getSortedStudents()}
+              mode={pickerMode}
+              onModeChange={setPickerMode}
+              pickedIds={pickedIds}
+              onPickedIdsChange={setPickedIds}
+              onClose={() => setShowPicker(false)}
+          />
+      )}
+
       <GenericModal 
           isOpen={modalConfig.isOpen}
           type={modalConfig.type}

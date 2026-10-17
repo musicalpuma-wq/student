@@ -10,6 +10,7 @@ import { Tools } from './pages/Tools';
 import { Login } from './pages/Login';
 import { SettingsProvider } from './context/SettingsContext';
 import { GlobalModalProvider } from './context/GlobalModalContext';
+import { TimerProvider } from './context/TimerContext';
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -22,6 +23,7 @@ function App() {
   return (
     <SettingsProvider>
       <GlobalModalProvider>
+        <TimerProvider>
         <BrowserRouter>
           {!isAuthenticated ? (
              <Login onLogin={() => setIsAuthenticated(true)} />
@@ -38,6 +40,7 @@ function App() {
             </Routes>
           )}
         </BrowserRouter>
+        </TimerProvider>
       </GlobalModalProvider>
     </SettingsProvider>
   );

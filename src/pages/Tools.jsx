@@ -1,36 +1,36 @@
 import { useState, useEffect, useRef } from 'react';
-import { Timer, Music, AudioWaveform, Play, Pause, Square, RotateCcw, Bell } from 'lucide-react';
+import { Timer, Music, AudioWaveform, Gamepad2, Play, Pause, Square, RotateCcw, Bell, Maximize2, Minimize2 } from 'lucide-react';
 import { useSettings } from '../context/SettingsContext';
+import { useTimer } from '../context/TimerContext';
+import { getAudioContext, playBlip, formatTime } from '../utils/audioUtils';
+import { SpaceGame } from '../components/SpaceGame';
 
-// Shared AudioContext, created lazily on the first user gesture
-let audioCtx = null;
-const getAudioContext = () => {
-    if (!audioCtx) {
-        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+// Available tone-generator timbres: native oscillator types + custom PeriodicWaves
+const TIMBRES = [
+    { id: 'sine', labelKey: 'timbreSine' },
+    { id: 'triangle', labelKey: 'timbreTriangle' },
+    { id: 'square', labelKey: 'timbreSquare' },
+    { id: 'sawtooth', labelKey: 'timbreSawtooth' },
+    { id: 'piano', labelKey: 'timbrePiano' },
+    { id: 'organ', labelKey: 'timbreOrgan' },
+];
+
+// Harmonic amplitudes for the custom (non-native) timbres
+const CUSTOM_WAVES = {
+    piano: [1, 0.6, 0.35, 0.2, 0.12, 0.07],
+    organ: [1, 0.8, 0.6, 0.5, 0.4, 0.3, 0.25, 0.2],
+};
+
+const waveCache = {};
+const getPeriodicWave = (ctx, name) => {
+    if (!waveCache[name]) {
+        const harmonics = CUSTOM_WAVES[name];
+        const real = new Float32Array(harmonics.length + 1);
+        const imag = new Float32Array(harmonics.length + 1);
+        harmonics.forEach((amp, i) => { imag[i + 1] = amp; });
+        waveCache[name] = ctx.createPeriodicWave(real, imag);
     }
-    if (audioCtx.state === 'suspended') audioCtx.resume();
-    return audioCtx;
-};
-
-// Short enveloped oscillator burst used for alarms and metronome clicks
-const playBlip = (frequency, startTime, duration, peak = 0.5, type = 'sine') => {
-    const ctx = getAudioContext();
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
-    osc.type = type;
-    osc.frequency.value = frequency;
-    gain.gain.setValueAtTime(0.0001, startTime);
-    gain.gain.exponentialRampToValueAtTime(peak, startTime + 0.01);
-    gain.gain.exponentialRampToValueAtTime(0.0001, startTime + duration);
-    osc.connect(gain).connect(ctx.destination);
-    osc.start(startTime);
-    osc.stop(startTime + duration + 0.05);
-};
-
-const formatTime = (totalSeconds) => {
-    const m = Math.floor(totalSeconds / 60);
-    const s = totalSeconds % 60;
-    return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+    return waveCache[name];
 };
 
 // Solfège names for the chromatic buttons (semitone offset from A)
@@ -49,86 +49,74 @@ const CHROMATIC_NOTES = [
     { letter: 'B', solfege: 'Si', offset: 2 },
 ];
 
+const NOTE_OFFSETS = Object.fromEntries(CHROMATIC_NOTES.map(n => [n.letter, n.offset]));
+
+// Piano keyboard: 5 octaves (C2–B6), black key sits after these white keys
+const KEYBOARD_OCTAVES = [2, 3, 4, 5, 6];
+const WHITE_NOTES = ['C', 'D', 'E', 'F', 'G', 'A', 'B'];
+const BLACK_AFTER = { C: 'C#', D: 'D#', F: 'F#', G: 'G#', A: 'A#' };
+
+// Small icon button that toggles the target card in/out of fullscreen
+function FullscreenButton({ targetRef, active, onToggle, titleActive, titleInactive }) {
+    return (
+        <button
+            onClick={() => onToggle(targetRef)}
+            title={active ? titleActive : titleInactive}
+            style={{
+                background: 'none', border: 'none', cursor: 'pointer',
+                color: 'var(--color-text-secondary)', padding: '4px',
+                display: 'flex', alignItems: 'center'
+            }}
+        >
+            {active ? <Minimize2 size={18} /> : <Maximize2 size={18} />}
+        </button>
+    );
+}
+
 export function Tools() {
     const { t } = useSettings();
 
-    // ---------------- Timer ----------------
-    const [timerTotal, setTimerTotal] = useState(0);
-    const [timerRemaining, setTimerRemaining] = useState(0);
-    const [timerRunning, setTimerRunning] = useState(false);
-    const [timerAlarm, setTimerAlarm] = useState(false);
-    const timerEndRef = useRef(0);
-    const timerIntervalRef = useRef(null);
-    const alarmIntervalRef = useRef(null);
+    // ---------------- Timer (global, keeps running across pages) ----------------
+    const {
+        timerTotal, timerRemaining, timerRunning, timerAlarm,
+        quickSet, startCustom, toggleStartPause, resetTimer, stopAlarm,
+    } = useTimer();
+    const [customMin, setCustomMin] = useState('');
+    const [customSec, setCustomSec] = useState('');
 
-    const clearTimerInterval = () => {
-        if (timerIntervalRef.current) {
-            clearInterval(timerIntervalRef.current);
-            timerIntervalRef.current = null;
+    const handleCustomTimerStart = () => {
+        const minutes = parseInt(customMin, 10) || 0;
+        const secs = parseInt(customSec, 10) || 0;
+        const seconds = minutes * 60 + Math.min(secs, 59);
+        startCustom(seconds);
+    };
+
+    // ---------------- Fullscreen ----------------
+    const [fullscreenActive, setFullscreenActive] = useState(false);
+    const timerCardRef = useRef(null);
+    const metronomeCardRef = useRef(null);
+    const toneCardRef = useRef(null);
+    const gameCardRef = useRef(null);
+
+    useEffect(() => {
+        const onChange = () => setFullscreenActive(!!document.fullscreenElement);
+        document.addEventListener('fullscreenchange', onChange);
+        return () => document.removeEventListener('fullscreenchange', onChange);
+    }, []);
+
+    const toggleFullscreen = (ref) => {
+        if (document.fullscreenElement) {
+            document.exitFullscreen();
+        } else {
+            ref.current?.requestFullscreen();
         }
     };
 
-    const stopAlarm = () => {
-        if (alarmIntervalRef.current) {
-            clearInterval(alarmIntervalRef.current);
-            alarmIntervalRef.current = null;
-        }
-        setTimerAlarm(false);
-    };
-
-    const startAlarm = () => {
-        setTimerAlarm(true);
-        const ring = () => {
-            const now = getAudioContext().currentTime;
-            playBlip(880, now, 0.12);
-            playBlip(880, now + 0.18, 0.12);
-            playBlip(659.25, now + 0.36, 0.3);
-        };
-        ring();
-        alarmIntervalRef.current = setInterval(ring, 1000);
-    };
-
-    const startTimer = (seconds) => {
-        clearTimerInterval();
-        timerEndRef.current = 0; // Computed on the first tick (keeps Date.now out of render scope)
-        setTimerRunning(true);
-        timerIntervalRef.current = setInterval(() => {
-            if (timerEndRef.current === 0) {
-                timerEndRef.current = Date.now() + seconds * 1000;
-            }
-            const left = Math.max(0, Math.round((timerEndRef.current - Date.now()) / 1000));
-            setTimerRemaining(left);
-            if (left <= 0) {
-                clearTimerInterval();
-                setTimerRunning(false);
-                startAlarm();
-            }
-        }, 250);
-    };
-
-    const handleQuickSet = (minutes) => {
-        stopAlarm();
-        const seconds = minutes * 60;
-        setTimerTotal(seconds);
-        setTimerRemaining(seconds);
-        startTimer(seconds);
-    };
-
-    const handleTimerStartPause = () => {
-        if (timerRunning) {
-            clearTimerInterval();
-            setTimerRunning(false);
-        } else if (timerRemaining > 0) {
-            stopAlarm();
-            startTimer(timerRemaining);
-        }
-    };
-
-    const handleTimerReset = () => {
-        stopAlarm();
-        clearTimerInterval();
-        setTimerRunning(false);
-        setTimerRemaining(timerTotal);
+    const fsButtonProps = {
+        active: fullscreenActive,
+        onToggle: toggleFullscreen,
+        titleActive: t('exitFullscreen'),
+        titleInactive: t('fullscreen'),
     };
 
     // ---------------- Metronome ----------------
@@ -216,6 +204,8 @@ export function Tools() {
     const [octave, setOctave] = useState(4);
     const [customHz, setCustomHz] = useState('');
     const [playingTone, setPlayingTone] = useState(null); // label of the active tone
+    const [toneView, setToneView] = useState('notes'); // 'notes' | 'keyboard'
+    const [timbre, setTimbre] = useState('sine');
     const oscRef = useRef(null);
     const gainRef = useRef(null);
 
@@ -241,7 +231,11 @@ export function Tools() {
         const ctx = getAudioContext();
         const osc = ctx.createOscillator();
         const gain = ctx.createGain();
-        osc.type = 'sine';
+        if (CUSTOM_WAVES[timbre]) {
+            osc.setPeriodicWave(getPeriodicWave(ctx, timbre));
+        } else {
+            osc.type = timbre;
+        }
         osc.frequency.value = frequency;
         gain.gain.setValueAtTime(0.0001, ctx.currentTime);
         gain.gain.exponentialRampToValueAtTime(0.3, ctx.currentTime + 0.03);
@@ -252,7 +246,7 @@ export function Tools() {
         setPlayingTone(label);
     };
 
-    const noteFrequency = (offset) => 440 * Math.pow(2, (offset + (octave - 4) * 12) / 12);
+    const noteFrequency = (offset, oct = octave) => 440 * Math.pow(2, (offset + (oct - 4) * 12) / 12);
 
     const handleCustomHzPlay = () => {
         const parsed = parseFloat(customHz.replace(',', '.'));
@@ -260,11 +254,9 @@ export function Tools() {
         playTone(parsed, `${parsed} Hz`);
     };
 
-    // Stop all sound when leaving the page
+    // Stop metronome/tone sound when leaving the page (the timer keeps running)
     useEffect(() => {
         return () => {
-            clearTimerInterval();
-            if (alarmIntervalRef.current) clearInterval(alarmIntervalRef.current);
             if (schedulerRef.current) clearInterval(schedulerRef.current);
             beatTimeoutsRef.current.forEach(clearTimeout);
             if (oscRef.current) {
@@ -274,21 +266,11 @@ export function Tools() {
         };
     }, []);
 
-    const sectionTitleStyle = { display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '1.2rem', marginBottom: '1.2rem' };
+    const sectionTitleStyle = { display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '1.2rem', margin: 0 };
+    const cardHeaderStyle = { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.2rem', width: '100%' };
 
     return (
         <div>
-            <style>{`
-                @keyframes toolsAlarmFlash {
-                    0%, 100% { border-color: var(--color-danger); box-shadow: 0 0 4px rgba(255, 59, 48, 0.4); }
-                    50% { border-color: transparent; box-shadow: 0 0 24px rgba(255, 59, 48, 0.9); }
-                }
-                .tools-timer-alarm {
-                    animation: toolsAlarmFlash 1s infinite;
-                    border: 2px solid var(--color-danger);
-                }
-            `}</style>
-
             <header style={{ marginBottom: '2rem' }}>
                 <h1 style={{ fontSize: '2.5rem', letterSpacing: '-0.5px' }}>{t('tools')}</h1>
             </header>
@@ -296,8 +278,11 @@ export function Tools() {
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '1.5rem' }}>
 
                 {/* Timer */}
-                <div className={`card ${timerAlarm ? 'tools-timer-alarm' : ''}`} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                    <h3 style={sectionTitleStyle}><Timer size={22} color="var(--color-accent)" /> {t('timer')}</h3>
+                <div ref={timerCardRef} className={`card ${timerAlarm ? 'tools-timer-alarm' : ''}`} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                    <div style={cardHeaderStyle}>
+                        <h3 style={sectionTitleStyle}><Timer size={22} color="var(--color-accent)" /> {t('timer')}</h3>
+                        <FullscreenButton targetRef={timerCardRef} {...fsButtonProps} />
+                    </div>
                     <div style={{
                         fontSize: '3.5rem', fontWeight: 700, fontVariantNumeric: 'tabular-nums',
                         color: timerAlarm ? 'var(--color-danger)' : 'var(--color-text-primary)',
@@ -312,16 +297,38 @@ export function Tools() {
                     )}
                     <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem', flexWrap: 'wrap', justifyContent: 'center' }}>
                         {[5, 10, 15].map(min => (
-                            <button key={min} className="btn btn-secondary" onClick={() => handleQuickSet(min)}>
+                            <button key={min} className="btn btn-secondary" onClick={() => quickSet(min)}>
                                 {min} {t('min')}
                             </button>
                         ))}
                     </div>
+                    <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem', flexWrap: 'wrap', justifyContent: 'center', alignItems: 'center' }}>
+                        <input
+                            type="number" min="0" placeholder={t('timerMinPh')}
+                            value={customMin}
+                            onChange={(e) => setCustomMin(e.target.value)}
+                            onKeyDown={(e) => { if (e.key === 'Enter') handleCustomTimerStart(); }}
+                            className="input-field no-spin"
+                            style={{ width: '70px', padding: '0.4rem', textAlign: 'center' }}
+                        />
+                        <span style={{ fontWeight: 700 }}>:</span>
+                        <input
+                            type="number" min="0" max="59" placeholder={t('timerSecPh')}
+                            value={customSec}
+                            onChange={(e) => setCustomSec(e.target.value)}
+                            onKeyDown={(e) => { if (e.key === 'Enter') handleCustomTimerStart(); }}
+                            className="input-field no-spin"
+                            style={{ width: '70px', padding: '0.4rem', textAlign: 'center' }}
+                        />
+                        <button className="btn btn-secondary" onClick={handleCustomTimerStart} disabled={(parseInt(customMin, 10) || 0) === 0 && (parseInt(customSec, 10) || 0) === 0}>
+                            <Play size={16} style={{ marginRight: '4px' }} /> {t('start')}
+                        </button>
+                    </div>
                     <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', justifyContent: 'center' }}>
-                        <button className="btn" onClick={handleTimerStartPause} disabled={timerRemaining === 0 && !timerAlarm}>
+                        <button className="btn" onClick={toggleStartPause} disabled={timerRemaining === 0 && !timerAlarm}>
                             {timerRunning ? <><Pause size={16} style={{ marginRight: '4px' }} /> {t('pause')}</> : <><Play size={16} style={{ marginRight: '4px' }} /> {timerRemaining < timerTotal && timerRemaining > 0 ? t('resume') : t('start')}</>}
                         </button>
-                        <button className="btn btn-secondary" onClick={handleTimerReset} disabled={timerTotal === 0}>
+                        <button className="btn btn-secondary" onClick={resetTimer} disabled={timerTotal === 0}>
                             <RotateCcw size={16} style={{ marginRight: '4px' }} /> {t('reset')}
                         </button>
                         {timerAlarm && (
@@ -333,8 +340,11 @@ export function Tools() {
                 </div>
 
                 {/* Metronome */}
-                <div className="card" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                    <h3 style={sectionTitleStyle}><Music size={22} color="var(--color-accent)" /> {t('metronome')}</h3>
+                <div ref={metronomeCardRef} className="card" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                    <div style={cardHeaderStyle}>
+                        <h3 style={sectionTitleStyle}><Music size={22} color="var(--color-accent)" /> {t('metronome')}</h3>
+                        <FullscreenButton targetRef={metronomeCardRef} {...fsButtonProps} />
+                    </div>
                     <div style={{ fontSize: '3.5rem', fontWeight: 700, fontVariantNumeric: 'tabular-nums', marginBottom: '0.5rem' }}>
                         {bpm} <span style={{ fontSize: '1.2rem', fontWeight: 500, color: 'var(--color-text-secondary)' }}>BPM</span>
                     </div>
@@ -409,21 +419,53 @@ export function Tools() {
                 </div>
 
                 {/* Tone Generator */}
-                <div className="card" style={{ gridColumn: '1 / -1' }}>
-                    <h3 style={sectionTitleStyle}><AudioWaveform size={22} color="var(--color-accent)" /> {t('toneGenerator')}</h3>
+                <div ref={toneCardRef} className="card" style={{ gridColumn: '1 / -1' }}>
+                    <div style={cardHeaderStyle}>
+                        <h3 style={sectionTitleStyle}><AudioWaveform size={22} color="var(--color-accent)" /> {t('toneGenerator')}</h3>
+                        <FullscreenButton targetRef={toneCardRef} {...fsButtonProps} />
+                    </div>
 
                     <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1rem', flexWrap: 'wrap' }}>
+                        <div style={{ display: 'flex', gap: '0.5rem' }}>
+                            <button
+                                className={`btn ${toneView === 'notes' ? '' : 'btn-secondary'}`}
+                                onClick={() => setToneView('notes')}
+                                style={{ padding: '0.4rem 0.8rem' }}
+                            >
+                                {t('toneNotes')}
+                            </button>
+                            <button
+                                className={`btn ${toneView === 'keyboard' ? '' : 'btn-secondary'}`}
+                                onClick={() => setToneView('keyboard')}
+                                style={{ padding: '0.4rem 0.8rem' }}
+                            >
+                                {t('toneKeyboard')}
+                            </button>
+                        </div>
                         <label style={{ fontWeight: 500, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                            {t('octave')}
+                            {t('timbre')}
                             <select
-                                value={octave}
-                                onChange={(e) => { stopTone(); setOctave(Number(e.target.value)); }}
+                                value={timbre}
+                                onChange={(e) => { stopTone(); setTimbre(e.target.value); }}
                                 className="input-field"
                                 style={{ width: 'auto', padding: '0.4rem 0.6rem' }}
                             >
-                                {[2, 3, 4, 5].map(o => <option key={o} value={o}>{o}</option>)}
+                                {TIMBRES.map(tb => <option key={tb.id} value={tb.id}>{t(tb.labelKey)}</option>)}
                             </select>
                         </label>
+                        {toneView === 'notes' && (
+                            <label style={{ fontWeight: 500, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                {t('octave')}
+                                <select
+                                    value={octave}
+                                    onChange={(e) => { stopTone(); setOctave(Number(e.target.value)); }}
+                                    className="input-field"
+                                    style={{ width: 'auto', padding: '0.4rem 0.6rem' }}
+                                >
+                                    {[2, 3, 4, 5].map(o => <option key={o} value={o}>{o}</option>)}
+                                </select>
+                            </label>
+                        )}
                         {playingTone && (
                             <span style={{ color: 'var(--color-accent)', fontWeight: 600 }}>
                                 {t('playing')}: {playingTone}
@@ -431,23 +473,85 @@ export function Tools() {
                         )}
                     </div>
 
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(72px, 1fr))', gap: '0.5rem', marginBottom: '1.5rem' }}>
-                        {CHROMATIC_NOTES.map(note => {
-                            const label = `${note.letter}${octave} (${note.solfege})`;
-                            const isActive = playingTone === label;
+                    {toneView === 'notes' ? (
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(72px, 1fr))', gap: '0.5rem', marginBottom: '1.5rem' }}>
+                            {CHROMATIC_NOTES.map(note => {
+                                const label = `${note.letter}${octave} (${note.solfege})`;
+                                const isActive = playingTone === label;
+                                return (
+                                    <button
+                                        key={note.letter}
+                                        className={`btn ${isActive ? '' : 'btn-secondary'}`}
+                                        onClick={() => playTone(noteFrequency(note.offset), label)}
+                                        style={{ display: 'flex', flexDirection: 'column', gap: '2px', padding: '0.5rem' }}
+                                    >
+                                        <span style={{ fontWeight: 700 }}>{note.letter}</span>
+                                        <span style={{ fontSize: '0.7rem', opacity: 0.8 }}>{note.solfege}</span>
+                                    </button>
+                                );
+                            })}
+                        </div>
+                    ) : (
+                        (() => {
+                            const whiteCount = KEYBOARD_OCTAVES.length * WHITE_NOTES.length;
+                            const whiteWidth = 100 / whiteCount;
+                            const blackWidth = whiteWidth * 0.62;
                             return (
-                                <button
-                                    key={note.letter}
-                                    className={`btn ${isActive ? '' : 'btn-secondary'}`}
-                                    onClick={() => playTone(noteFrequency(note.offset), label)}
-                                    style={{ display: 'flex', flexDirection: 'column', gap: '2px', padding: '0.5rem' }}
-                                >
-                                    <span style={{ fontWeight: 700 }}>{note.letter}</span>
-                                    <span style={{ fontSize: '0.7rem', opacity: 0.8 }}>{note.solfege}</span>
-                                </button>
+                                <div style={{ overflowX: 'auto', marginBottom: '1.5rem', paddingBottom: '0.5rem' }}>
+                                    <div style={{ position: 'relative', display: 'flex', height: '170px', minWidth: '720px', userSelect: 'none' }}>
+                                        {KEYBOARD_OCTAVES.flatMap(oct =>
+                                            WHITE_NOTES.map(letter => {
+                                                const label = `${letter}${oct}`;
+                                                const isActive = playingTone === label;
+                                                return (
+                                                    <button
+                                                        key={label}
+                                                        onClick={() => playTone(noteFrequency(NOTE_OFFSETS[letter], oct), label)}
+                                                        style={{
+                                                            width: `${whiteWidth}%`, height: '100%',
+                                                            background: isActive ? 'var(--color-accent)' : '#fafafa',
+                                                            border: '1px solid #bbb', borderRadius: '0 0 4px 4px',
+                                                            cursor: 'pointer', padding: 0,
+                                                            display: 'flex', alignItems: 'flex-end', justifyContent: 'center',
+                                                            fontSize: '0.7rem', fontWeight: 600, paddingBottom: '4px',
+                                                            color: isActive ? 'var(--color-on-accent)' : '#888',
+                                                            transition: 'background 0.05s ease'
+                                                        }}
+                                                    >
+                                                        {letter === 'C' ? label : ''}
+                                                    </button>
+                                                );
+                                            })
+                                        )}
+                                        {KEYBOARD_OCTAVES.flatMap((oct, octIdx) =>
+                                            WHITE_NOTES.flatMap((letter, noteIdx) => {
+                                                const black = BLACK_AFTER[letter];
+                                                if (!black) return [];
+                                                const label = `${black}${oct}`;
+                                                const isActive = playingTone === label;
+                                                const whiteIndex = octIdx * WHITE_NOTES.length + noteIdx;
+                                                return (
+                                                    <button
+                                                        key={label}
+                                                        onClick={() => playTone(noteFrequency(NOTE_OFFSETS[black], oct), label)}
+                                                        style={{
+                                                            position: 'absolute', top: 0,
+                                                            left: `${(whiteIndex + 1) * whiteWidth - blackWidth / 2}%`,
+                                                            width: `${blackWidth}%`, height: '60%',
+                                                            background: isActive ? 'var(--color-accent)' : '#1c1c1e',
+                                                            border: '1px solid #000', borderRadius: '0 0 3px 3px',
+                                                            cursor: 'pointer', padding: 0, zIndex: 1,
+                                                            transition: 'background 0.05s ease'
+                                                        }}
+                                                    />
+                                                );
+                                            })
+                                        )}
+                                    </div>
+                                </div>
                             );
-                        })}
-                    </div>
+                        })()
+                    )}
 
                     <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', alignItems: 'center' }}>
                         <input
@@ -475,6 +579,17 @@ export function Tools() {
                                 <Square size={16} style={{ marginRight: '4px' }} /> {t('stop')}
                             </button>
                         )}
+                    </div>
+                </div>
+
+                {/* Space Game */}
+                <div ref={gameCardRef} className="card" style={{ gridColumn: '1 / -1', display: 'flex', flexDirection: 'column' }}>
+                    <div style={cardHeaderStyle}>
+                        <h3 style={sectionTitleStyle}><Gamepad2 size={22} color="var(--color-accent)" /> {t('spaceGame')}</h3>
+                        <FullscreenButton targetRef={gameCardRef} {...fsButtonProps} />
+                    </div>
+                    <div style={{ flex: 1, minHeight: '600px', display: 'flex' }}>
+                        <SpaceGame />
                     </div>
                 </div>
             </div>

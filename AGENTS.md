@@ -53,8 +53,9 @@ npm run lint       # eslint .
 Notes:
 
 - `npm run build` currently succeeds but warns that the main chunk is >500 kB.
-- `npm run lint` currently reports pre-existing errors (~23, mostly
-  `react-hooks/set-state-in-effect` and one `no-unused-vars`). Do not assume a
+- `npm run lint` currently reports pre-existing errors (~24, mostly
+  `react-hooks/set-state-in-effect`, a few `no-unused-vars`, and
+  `react-refresh/only-export-components` in the context files). Do not assume a
   clean baseline — when changing code, keep the files you touch no worse.
 - There are **no tests** and no test runner configured.
 
@@ -82,27 +83,47 @@ src/
                             checkboxes: averages, pass rate, best/low
                             students, hardest/easiest activities, distribution
     Downloads.jsx           PDF report download center
-    Tools.jsx               Classroom tools: timer (quick-set 5/10/15 min,
-                            visual + sound alarm), metronome (60/90/120 BPM
-                            presets, time signatures 2/4, 3/4, 4/4 and custom
-                            n/m with compound-meter accents), tone generator
-                            (chromatic scale, custom Hz, dedicated A440).
+    Tools.jsx               Classroom tools, each card with a fullscreen
+                            button (native Fullscreen API): timer (quick-set
+                            5/10/15 min plus free min:sec entry, visual +
+                            sound alarm; state lives in TimerContext so it
+                            keeps running across pages, with a FloatingTimer
+                            mini widget shown outside /tools),
+                            metronome (60/90/120 BPM presets, time signatures
+                            2/4, 3/4, 4/4 and custom n/m with compound-meter
+                            accents), tone generator (chromatic scale, custom
+                            Hz, dedicated A440, 5-octave piano keyboard C2–B6,
+                            6 timbres: sine/triangle/square/sawtooth plus
+                            piano and organ via PeriodicWave), and the
+                            SpaceGame (Neon Galaga canvas shooter).
                             All sound uses the Web Audio API; no audio assets.
   components/
-    Layout.jsx              Shell with Sidebar + <Outlet/>
-    Sidebar.jsx             Nav, backup download/restore, settings entry
+    Layout.jsx              Shell with Sidebar + <Outlet/>; owns the collapsed
+                            state of the sidebar and mounts FloatingTimer
+    Sidebar.jsx             Nav, backup download/restore, settings entry;
+                            collapsible to icon-only (76 px) mode
     SettingsModal.jsx       Teacher name, subject, language, theme, font size,
                             Dashboard course visibility (per period)
     GenericModal.jsx        Reusable alert/confirm/prompt modal
+    FloatingTimer.jsx       Corner widget mirroring the global timer when it
+                            runs (or rings) outside /tools; click returns there
+    SpaceGame.jsx           Neon Galaga: canvas space shooter (own Web Audio
+                            synth, high score in localStorage, touch controls)
+    RandomPickerModal.jsx   Random student picker with roulette animation and
+                            sounds; modes: no-repeat (pool of pickedIds kept by
+                            CourseGradebook) or repeats allowed
   context/
     SettingsContext.jsx     Settings state, theme application, t() translator
     GlobalModalContext.jsx  showAlert/showConfirm/showPrompt hooks
+    TimerContext.jsx        Global countdown timer state + alarm (survives
+                            navigation); consumed by Tools and FloatingTimer
   services/
     DataStore.js            All persistence (localStorage) + data migrations
     PDFGenerator.js         All PDF report generation (jsPDF + autotable)
   utils/
     translations.js         es/en string tables
     spriteUtils.js          Mascot sprite-sheet helpers (course animal by hash)
+    audioUtils.js           Shared lazy AudioContext, playBlip, formatTime
   assets/mascots/           PNG sprite sheets (dog, bear, fox; 5 expressions each)
 ```
 
@@ -156,7 +177,9 @@ Other localStorage keys: `sms_settings` (teacher name, subject, language,
 themeMode, fontSize, currentPeriod, dashboardHidden), `app_password` (login
 password), `sms_late_times` (late-arrival time cache in CourseGradebook),
 `sms_perf_chart_hidden` (courses hidden from the Dashboard performance
-chart, keyed by period: `{ [period]: [courseName] }`).
+chart, keyed by period: `{ [period]: [courseName] }`),
+`sms_sidebar_collapsed` (`'1'` when the sidebar is collapsed to icons),
+`neon_galaga_highscore` (SpaceGame high score).
 
 `settings.dashboardHidden` hides courses from the whole Dashboard (course
 cards, quick-access dropdown and performance chart) without deleting them,
@@ -171,7 +194,8 @@ repo root.
 
 ## Architecture Patterns and Conventions
 
-- **State**: local `useState` in pages + two React contexts. There is no
+- **State**: local `useState` in pages + three React contexts (Settings,
+  GlobalModal, Timer). There is no
   global store. Pages read via `DataStore` getters and re-render via a
   `refreshTrigger` counter after mutations.
 - **i18n**: never hardcode UI strings in pages — add keys to both `es` and
@@ -184,7 +208,9 @@ repo root.
   variant whose palette and hover effects are overrides at the end of
   `src/index.css` (scope new cyberpunk rules under
   `:root[data-theme='cyberpunk']`). Use the `var(--color-*)` variables
-  rather than hardcoded colors. Many components use inline styles
+  rather than hardcoded colors; for text/icons drawn on top of
+  `--color-accent` use `--color-on-accent` (white in light/dark, dark ink
+  in cyberpunk). Many components use inline styles
   referencing these variables; match that idiom.
 - **Modals**: use `useGlobalModal()` (`showAlert`, `showConfirm`,
   `showPrompt`) instead of `window.confirm`/`alert`.

@@ -150,7 +150,8 @@ export function Dashboard() {
                         borderRadius: '8px', 
                         border: '1px solid var(--color-border)',
                         fontSize: '0.9rem',
-                        background: 'white',
+                        background: 'var(--color-bg-card)',
+                        color: 'var(--color-text-primary)',
                          cursor: 'pointer'
                     }}
                     defaultValue=""
@@ -184,7 +185,8 @@ export function Dashboard() {
                         top: '100%',
                         left: 0,
                         right: 0,
-                        background: 'white',
+                        background: 'var(--color-bg-card)',
+                        color: 'var(--color-text-primary)',
                         border: '1px solid var(--color-border)',
                         borderRadius: '8px',
                         marginTop: '4px',
@@ -355,7 +357,13 @@ export function Dashboard() {
                       }
 
                       return (
-                          <div key={course} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem', minWidth: '40px', height: '100%', justifyContent: 'flex-end', position: 'relative' }}>
+                          <div
+                              key={course}
+                              className="perf-bar-clickable"
+                              onClick={() => navigate(`/course/${encodeURIComponent(course)}`)}
+                              title={`${course}: ${stats.avg}`}
+                              style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem', minWidth: '40px', height: '100%', justifyContent: 'flex-end', position: 'relative', cursor: 'pointer' }}
+                          >
                                {showEmojis && (
                                    <div className={mascotClass} style={{
                                        display: 'flex',
@@ -469,7 +477,7 @@ export function Dashboard() {
                         <div style={{ 
                           display: 'inline-block',
                           padding: '0.2rem 0.6rem', 
-                          background: '#f5f5f7', 
+                          background: 'var(--color-bg-body)', 
                           borderRadius: '6px',
                           fontWeight: 600,
                           fontSize: '0.8rem',
@@ -622,7 +630,7 @@ export function Dashboard() {
                          />
                     </div>
                     
-                    <div style={{ marginBottom: '1rem', fontSize: '0.85rem', color: 'var(--color-text-secondary)', background: '#f5f5f7', padding: '0.5rem', borderRadius: '4px' }}>
+                    <div style={{ marginBottom: '1rem', fontSize: '0.85rem', color: 'var(--color-text-secondary)', background: 'var(--color-bg-body)', padding: '0.5rem', borderRadius: '4px' }}>
                         Creating: {newCourseGrade ? `${newCourseGrade}-${newCourseJornada}` : '...'}
                     </div>
 

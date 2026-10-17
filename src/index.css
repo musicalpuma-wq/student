@@ -12,6 +12,7 @@
   --color-success: #34c759;
   --color-warning: #ff9f0a;
   --color-danger: #ff3b30;
+  --color-on-accent: #ffffff; /* Text/icons drawn on top of --color-accent */
 
   /* Shadows & Radius */
   --shadow-sm: 0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24);
@@ -32,6 +33,7 @@
   --color-text-primary: #f5f5f7;
   --color-text-secondary: #86868b;
   --color-border: #38383a;
+  --color-on-accent: #ffffff;
   --shadow-sm: 0 1px 3px rgba(0,0,0,0.5);
   --shadow-md: 0 4px 6px rgba(0,0,0,0.3);
 }
@@ -233,13 +235,14 @@ th {
   --color-bg-body: #0b0218;
   --color-bg-card: #1b0633;
   --color-text-primary: #eaf6ff;
-  --color-text-secondary: #a79bca;
+  --color-text-secondary: #c9bdf0;
   --color-accent: #00f0ff;
   --color-accent-hover: #6ff7ff;
   --color-border: #4b2a85;
   --color-success: #39ff6a;
   --color-warning: #f9f002;
   --color-danger: #ff2a6d;
+  --color-on-accent: #062a30; /* Dark ink readable over the neon cyan accent */
 
   --shadow-sm: 0 0 6px rgba(0, 240, 255, 0.18), 0 2px 8px rgba(0, 0, 0, 0.6);
   --shadow-md: 0 0 14px rgba(0, 240, 255, 0.28), 0 6px 16px rgba(0, 0, 0, 0.6);
@@ -273,7 +276,7 @@ th {
 
 /* Buttons: solid neon with dark text and glow */
 :root[data-theme='cyberpunk'] .btn {
-  color: #08131a;
+  color: var(--color-on-accent);
   font-weight: 600;
   box-shadow: 0 0 10px rgba(0, 240, 255, 0.45);
 }
@@ -334,4 +337,242 @@ th {
 :root[data-theme='cyberpunk'] .glass {
   background: rgba(27, 6, 51, 0.75);
   border: 1px solid rgba(0, 240, 255, 0.25);
+}
+
+/* ============================================
+   Fullscreen tool cards (Fullscreen API)
+   ============================================ */
+.card:fullscreen {
+  border-radius: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+/* ============================================
+   Timer alarm flash (Tools card + floating widget)
+   ============================================ */
+@keyframes toolsAlarmFlash {
+  0%, 100% { border-color: var(--color-danger); box-shadow: 0 0 4px rgba(255, 59, 48, 0.4); }
+  50% { border-color: transparent; box-shadow: 0 0 24px rgba(255, 59, 48, 0.9); }
+}
+
+.tools-timer-alarm {
+  animation: toolsAlarmFlash 1s infinite;
+  border: 2px solid var(--color-danger);
+}
+
+/* ============================================
+   Attendance hover tooltip (CourseGradebook)
+   Positioned with fixed coordinates from JS so the
+   horizontal scroll container never clips it
+   ============================================ */
+.att-tooltip {
+  position: fixed;
+  transform: translate(-50%, -100%);
+  background: var(--color-text-primary);
+  color: var(--color-bg-card);
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 0.3rem 0.6rem;
+  border-radius: var(--radius-sm);
+  white-space: nowrap;
+  z-index: 400;
+  pointer-events: none;
+  box-shadow: var(--shadow-md);
+}
+
+/* ============================================
+   Dashboard performance chart: clickable course bars
+   ============================================ */
+.perf-bar-clickable {
+  border-radius: var(--radius-sm);
+  transition: transform var(--transition-fast), filter var(--transition-fast);
+}
+
+.perf-bar-clickable:hover {
+  transform: translateY(-3px);
+  filter: brightness(1.08);
+}
+
+.perf-bar-clickable:hover .animate-bar {
+  box-shadow: 0 0 12px rgba(0, 113, 227, 0.35), inset 0 2px 4px rgba(255, 255, 255, 0.3);
+}
+
+/* ============================================
+   Random student picker (roulette)
+   ============================================ */
+@keyframes rouletteWinnerPop {
+  0% { transform: scale(0.6); opacity: 0.4; }
+  60% { transform: scale(1.15); }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+.roulette-winner {
+  animation: rouletteWinnerPop 0.5s ease forwards;
+  color: var(--color-accent);
+  text-shadow: 0 0 18px var(--color-accent);
+}
+
+/* ============================================
+   Space game (Neon Galaga) overlays and controls
+   ============================================ */
+.sg-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(5, 5, 12, 0.85);
+  backdrop-filter: blur(8px);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  z-index: 20;
+  padding: 20px;
+  text-align: center;
+}
+
+.sg-neon-title {
+  font-weight: 900;
+  font-size: clamp(2rem, 6vw, 4rem);
+  color: #fff;
+  text-shadow:
+    0 0 5px #fff,
+    0 0 10px #fff,
+    0 0 20px #00f3ff,
+    0 0 30px #00f3ff,
+    0 0 40px #00f3ff;
+  letter-spacing: 4px;
+  margin-bottom: 10px;
+  animation: sgPulseGlow 2s infinite alternate;
+}
+
+.sg-neon-title-pink {
+  color: #ff0055;
+  text-shadow: 0 0 20px #ff0055;
+  animation: none;
+}
+
+.sg-neon-subtitle {
+  font-size: clamp(0.7rem, 2vw, 1.1rem);
+  font-weight: 700;
+  letter-spacing: 2px;
+  color: #ff0055;
+  text-shadow: 0 0 8px #ff0055, 0 0 15px #ff0055;
+  margin-bottom: 30px;
+}
+
+@keyframes sgPulseGlow {
+  0% { text-shadow: 0 0 5px #fff, 0 0 10px #fff, 0 0 20px #00f3ff, 0 0 30px #00f3ff; }
+  100% { text-shadow: 0 0 10px #fff, 0 0 20px #ff0055, 0 0 30px #ff0055, 0 0 50px #ff0055; }
+}
+
+.sg-neon-button {
+  font-weight: 700;
+  font-size: 1.1rem;
+  padding: 14px 36px;
+  background: rgba(0, 243, 255, 0.1);
+  color: #00f3ff;
+  border: 2px solid #00f3ff;
+  border-radius: 30px;
+  cursor: pointer;
+  outline: none;
+  box-shadow: 0 0 15px rgba(0, 243, 255, 0.4), inset 0 0 15px rgba(0, 243, 255, 0.2);
+  transition: all 0.2s ease;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  margin: 10px;
+}
+
+.sg-neon-button:hover,
+.sg-neon-button:active {
+  background: #00f3ff;
+  color: #000;
+  box-shadow: 0 0 30px #00f3ff, inset 0 0 20px #ffffff;
+  transform: scale(1.05);
+}
+
+.sg-neon-button-pink {
+  border-color: #ff0055;
+  color: #ff0055;
+  box-shadow: 0 0 15px rgba(255, 0, 85, 0.4), inset 0 0 15px rgba(255, 0, 85, 0.2);
+}
+
+.sg-neon-button-pink:hover,
+.sg-neon-button-pink:active {
+  background: #ff0055;
+  color: #000;
+  box-shadow: 0 0 30px #ff0055, inset 0 0 20px #ffffff;
+}
+
+.sg-scanlines {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%);
+  background-size: 100% 4px;
+  z-index: 5;
+  opacity: 0.6;
+}
+
+.sg-pause-btn {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  z-index: 10;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 1px solid #22d3ee;
+  color: #22d3ee;
+  background: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(4px);
+  cursor: pointer;
+  font-weight: 700;
+  font-size: 0.9rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.sg-touch-controls {
+  position: absolute;
+  bottom: 20px;
+  left: 0;
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  padding: 0 20px;
+  z-index: 10;
+  pointer-events: none;
+}
+
+.sg-touch-btn {
+  pointer-events: auto;
+  width: 65px;
+  height: 65px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.08);
+  border: 2px solid rgba(0, 243, 255, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  color: #00f3ff;
+  font-size: 1.5rem;
+  backdrop-filter: blur(4px);
+  box-shadow: 0 0 15px rgba(0, 243, 255, 0.2);
+  touch-action: manipulation;
+  user-select: none;
+}
+
+.sg-touch-btn:active {
+  background: rgba(0, 243, 255, 0.4);
+  transform: scale(0.95);
+}
+
+.sg-touch-btn-fire {
+  border-color: #ff0055;
+  color: #ff0055;
+  width: 75px;
+  height: 75px;
 }
