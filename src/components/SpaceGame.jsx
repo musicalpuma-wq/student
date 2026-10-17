@@ -6,6 +6,10 @@ import { useSettings } from '../context/SettingsContext';
  * Self-contained: no external fonts/libraries, Web Audio synth, high score in
  * localStorage ('neon_galaga_highscore'). All mutable game state lives inside
  * the mount effect; React state only mirrors gameState/score for the overlays.
+ *
+ * Performance note: ctx.shadowBlur is NOT used (it is extremely expensive and
+ * stalls the main thread when applied to many entities per frame). The neon
+ * glow is faked with a wide translucent under-stroke, which is far cheaper.
  */
 export function SpaceGame() {
     const { t } = useSettings();
@@ -169,9 +173,20 @@ export function SpaceGame() {
         const container = containerRef.current;
         const ctx = canvas.getContext('2d');
 
+        // Assigned later; resizeCanvas guards against null on its first sync call
+        let player = null;
+        let starfield = null;
+        let synthGrid = null;
+
         const resizeCanvas = () => {
             canvas.width = container.clientWidth;
             canvas.height = container.clientHeight;
+            // Re-anchor the ship to the new bottom and rebuild the starfield
+            if (player) {
+                player.y = canvas.height - 70;
+                player.x = Math.max(player.radius, Math.min(canvas.width - player.radius, player.x));
+            }
+            if (starfield) starfield.init();
         };
         // ResizeObserver covers window resizes and entering/exiting fullscreen
         const resizeObserver = new ResizeObserver(resizeCanvas);
@@ -205,6 +220,14 @@ export function SpaceGame() {
         const onKeyUp = (e) => { keys[e.code] = false; };
         window.addEventListener('keydown', onKeyDown);
         window.addEventListener('keyup', onKeyUp);
+
+        // Pause when the user leaves fullscreen mid-game (the launcher card hides the canvas)
+        const onFullscreenChange = () => {
+            if (!document.fullscreenElement && gameStateLocal === 'PLAYING') {
+                togglePause();
+            }
+        };
+        document.addEventListener('fullscreenchange', onFullscreenChange);
 
         // Synthwave Background Grid
         class SynthGrid {
@@ -272,16 +295,12 @@ export function SpaceGame() {
                 });
             }
             draw() {
-                ctx.save();
                 this.stars.forEach(s => {
                     ctx.fillStyle = s.color;
-                    ctx.shadowBlur = 6;
-                    ctx.shadowColor = s.color;
                     ctx.beginPath();
                     ctx.arc(s.x, s.y, s.size, 0, Math.PI * 2);
                     ctx.fill();
                 });
-                ctx.restore();
             }
         }
 
@@ -306,15 +325,12 @@ export function SpaceGame() {
             }
             draw() {
                 if (this.life <= 0) return;
-                ctx.save();
                 ctx.globalAlpha = this.life;
                 ctx.fillStyle = this.color;
-                ctx.shadowBlur = 10;
-                ctx.shadowColor = this.color;
                 ctx.beginPath();
                 ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
                 ctx.fill();
-                ctx.restore();
+                ctx.globalAlpha = 1;
             }
         }
 
@@ -353,9 +369,13 @@ export function SpaceGame() {
                 ctx.rotate(this.angle);
                 ctx.strokeStyle = this.colors[this.type];
                 ctx.lineWidth = 2;
-                ctx.shadowBlur = 12;
-                ctx.shadowColor = this.colors[this.type];
 
+                // Fake glow: larger translucent frame behind the solid one
+                ctx.globalAlpha = 0.3;
+                ctx.lineWidth = 5;
+                ctx.strokeRect(-this.size / 2 - 2, -this.size / 2 - 2, this.size + 4, this.size + 4);
+                ctx.globalAlpha = 1;
+                ctx.lineWidth = 2;
                 ctx.strokeRect(-this.size / 2, -this.size / 2, this.size, this.size);
 
                 ctx.fillStyle = '#fff';
@@ -441,6 +461,18 @@ export function SpaceGame() {
                 }
             }
 
+            traceShip() {
+                // Cyberpunk Neon Fighter Ship Design
+                ctx.beginPath();
+                ctx.moveTo(0, -this.radius - 5); // Nose
+                ctx.lineTo(-this.radius, this.radius); // Left Wing
+                ctx.lineTo(-this.radius / 2, this.radius / 2);
+                ctx.lineTo(0, this.radius); // Tail center
+                ctx.lineTo(this.radius / 2, this.radius / 2);
+                ctx.lineTo(this.radius, this.radius); // Right Wing
+                ctx.closePath();
+            }
+
             draw() {
                 if (this.invulnerable % 6 > 3) return; // Flash effect when hit
 
@@ -450,43 +482,44 @@ export function SpaceGame() {
                 // Shield visual aura
                 if (this.shield > 0) {
                     ctx.strokeStyle = '#39ff14';
+                    ctx.globalAlpha = 0.35;
+                    ctx.lineWidth = 8;
+                    ctx.beginPath();
+                    ctx.arc(0, 0, this.radius + 10, 0, Math.PI * 2);
+                    ctx.stroke();
+                    ctx.globalAlpha = 1;
                     ctx.lineWidth = 3;
-                    ctx.shadowBlur = 15;
-                    ctx.shadowColor = '#39ff14';
                     ctx.beginPath();
                     ctx.arc(0, 0, this.radius + 10, 0, Math.PI * 2);
                     ctx.stroke();
                 }
 
-                // Cyberpunk Neon Fighter Ship Design
+                // Fake glow: wide translucent under-stroke, then the solid ship
+                this.traceShip();
                 ctx.strokeStyle = '#00f3ff';
+                ctx.globalAlpha = 0.3;
+                ctx.lineWidth = 7;
+                ctx.stroke();
+
+                ctx.globalAlpha = 1;
                 ctx.fillStyle = '#050515';
                 ctx.lineWidth = 2.5;
-                ctx.shadowBlur = 15;
-                ctx.shadowColor = '#00f3ff';
-
-                ctx.beginPath();
-                ctx.moveTo(0, -this.radius - 5); // Nose
-                ctx.lineTo(-this.radius, this.radius); // Left Wing
-                ctx.lineTo(-this.radius / 2, this.radius / 2);
-                ctx.lineTo(0, this.radius); // Tail center
-                ctx.lineTo(this.radius / 2, this.radius / 2);
-                ctx.lineTo(this.radius, this.radius); // Right Wing
-                ctx.closePath();
                 ctx.fill();
                 ctx.stroke();
 
                 // Cockpit Core Glow
                 ctx.fillStyle = '#ff0055';
-                ctx.shadowColor = '#ff0055';
-                ctx.shadowBlur = 10;
+                ctx.globalAlpha = 0.35;
+                ctx.beginPath();
+                ctx.arc(0, -2, 9, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.globalAlpha = 1;
                 ctx.beginPath();
                 ctx.arc(0, -2, 5, 0, Math.PI * 2);
                 ctx.fill();
 
                 // Engine Thruster Flame
                 ctx.fillStyle = '#ffe600';
-                ctx.shadowColor = '#ffe600';
                 ctx.beginPath();
                 ctx.moveTo(-5, this.radius - 2);
                 ctx.lineTo(0, this.radius + 12 + Math.random() * 6);
@@ -513,23 +546,25 @@ export function SpaceGame() {
                 this.y += this.vy;
             }
             draw() {
-                ctx.save();
                 ctx.strokeStyle = this.color;
-                ctx.fillStyle = '#ffffff';
-                ctx.shadowBlur = 12;
-                ctx.shadowColor = this.color;
-                ctx.lineWidth = 3;
-
+                ctx.lineCap = 'round';
+                // Fake glow: wide translucent under-stroke
+                ctx.globalAlpha = 0.3;
+                ctx.lineWidth = 8;
                 ctx.beginPath();
                 ctx.moveTo(this.x, this.y);
                 ctx.lineTo(this.x - this.vx * 2, this.y - this.vy * 2);
                 ctx.stroke();
-
-                ctx.restore();
+                ctx.globalAlpha = 1;
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                ctx.moveTo(this.x, this.y);
+                ctx.lineTo(this.x - this.vx * 2, this.y - this.vy * 2);
+                ctx.stroke();
             }
         }
 
-        const player = new Player();
+        player = new Player();
         let bullets = [];
         let enemyBullets = [];
 
@@ -604,15 +639,7 @@ export function SpaceGame() {
                 }
             }
 
-            draw() {
-                ctx.save();
-                ctx.translate(this.x, this.y);
-                ctx.strokeStyle = this.color;
-                ctx.fillStyle = '#0a0010';
-                ctx.lineWidth = 2.5;
-                ctx.shadowBlur = 12;
-                ctx.shadowColor = this.color;
-
+            traceShip() {
                 if (this.type === 'BASIC') {
                     // Diamond Drone Shape
                     ctx.beginPath();
@@ -621,8 +648,6 @@ export function SpaceGame() {
                     ctx.lineTo(0, -this.radius);
                     ctx.lineTo(this.radius, 0);
                     ctx.closePath();
-                    ctx.fill();
-                    ctx.stroke();
                 } else if (this.type === 'ZIGZAG') {
                     // Interceptor Crab/Inverted Shape
                     ctx.beginPath();
@@ -632,8 +657,6 @@ export function SpaceGame() {
                     ctx.lineTo(this.radius / 2, -this.radius);
                     ctx.lineTo(-this.radius / 2, -this.radius);
                     ctx.closePath();
-                    ctx.fill();
-                    ctx.stroke();
                 } else if (this.type === 'BOSS') {
                     // Heavy Mothership
                     ctx.beginPath();
@@ -643,9 +666,27 @@ export function SpaceGame() {
                     ctx.lineTo(this.radius / 1.5, -this.radius);
                     ctx.lineTo(this.radius, -this.radius / 3);
                     ctx.closePath();
-                    ctx.fill();
-                    ctx.stroke();
+                }
+            }
 
+            draw() {
+                ctx.save();
+                ctx.translate(this.x, this.y);
+                ctx.strokeStyle = this.color;
+
+                // Fake glow: wide translucent under-stroke, then the solid ship
+                this.traceShip();
+                ctx.globalAlpha = 0.3;
+                ctx.lineWidth = 7;
+                ctx.stroke();
+
+                ctx.globalAlpha = 1;
+                ctx.fillStyle = '#0a0010';
+                ctx.lineWidth = 2.5;
+                ctx.fill();
+                ctx.stroke();
+
+                if (this.type === 'BOSS') {
                     // Boss HP Bar overlay
                     ctx.fillStyle = 'rgba(255, 0, 85, 0.3)';
                     ctx.fillRect(-this.radius, -this.radius - 12, this.radius * 2, 5);
@@ -803,8 +844,6 @@ export function SpaceGame() {
             ctx.save();
             ctx.font = 'bold 14px monospace';
             ctx.fillStyle = '#00f3ff';
-            ctx.shadowBlur = 8;
-            ctx.shadowColor = '#00f3ff';
 
             // Score & Wave Info
             ctx.fillText(`SCORE: ${score}`, 20, 35);
@@ -813,24 +852,20 @@ export function SpaceGame() {
             // Combo Counter
             if (combo > 1) {
                 ctx.fillStyle = '#ffe600';
-                ctx.shadowColor = '#ffe600';
                 ctx.fillText(`COMBO x${combo}`, 20, 85);
             }
 
             // High Score
             ctx.textAlign = 'right';
             ctx.fillStyle = '#ff0055';
-            ctx.shadowColor = '#ff0055';
             ctx.fillText(`HIGH: ${high}`, canvas.width - 20, 35);
 
             // Lives Mini Icons
-            ctx.shadowBlur = 10;
-            ctx.shadowColor = '#00f3ff';
+            ctx.strokeStyle = '#00f3ff';
+            ctx.lineWidth = 2;
             for (let i = 0; i < player.lives; i++) {
                 const lx = canvas.width - 30 - (i * 25);
                 const ly = 55;
-                ctx.strokeStyle = '#00f3ff';
-                ctx.lineWidth = 2;
                 ctx.beginPath();
                 ctx.moveTo(lx, ly - 8);
                 ctx.lineTo(lx - 7, ly + 7);
@@ -842,8 +877,8 @@ export function SpaceGame() {
             ctx.restore();
         }
 
-        const starfield = new Starfield();
-        const synthGrid = new SynthGrid();
+        starfield = new Starfield();
+        synthGrid = new SynthGrid();
 
         let rafId = null;
         function gameLoop() {
@@ -984,6 +1019,7 @@ export function SpaceGame() {
             cancelAnimationFrame(rafId);
             window.removeEventListener('keydown', onKeyDown);
             window.removeEventListener('keyup', onKeyUp);
+            document.removeEventListener('fullscreenchange', onFullscreenChange);
             resizeObserver.disconnect();
             sound.stopBGM();
         };
@@ -1001,11 +1037,10 @@ export function SpaceGame() {
                 position: 'relative',
                 width: '100%',
                 flex: 1,
-                minHeight: '600px',
+                minHeight: 0,
                 borderRadius: '12px',
                 overflow: 'hidden',
-                background: '#05050a',
-                boxShadow: '0 0 50px rgba(0, 243, 255, 0.15)'
+                background: '#05050a'
             }}
         >
             <canvas

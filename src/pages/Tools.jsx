@@ -582,13 +582,28 @@ export function Tools() {
                     </div>
                 </div>
 
-                {/* Space Game */}
-                <div ref={gameCardRef} className="card" style={{ gridColumn: '1 / -1', display: 'flex', flexDirection: 'column' }}>
+                {/* Space Game — launcher card; the game itself renders in fullscreen */}
+                <div ref={gameCardRef} className="card sg-game-card" style={{ gridColumn: '1 / -1', display: 'flex', flexDirection: 'column' }}>
                     <div style={cardHeaderStyle}>
                         <h3 style={sectionTitleStyle}><Gamepad2 size={22} color="var(--color-accent)" /> {t('spaceGame')}</h3>
                         <FullscreenButton targetRef={gameCardRef} {...fsButtonProps} />
                     </div>
-                    <div style={{ flex: 1, minHeight: '600px', display: 'flex' }}>
+                    <div
+                        className="sg-launcher"
+                        onClick={() => toggleFullscreen(gameCardRef)}
+                        role="button"
+                        tabIndex={0}
+                        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') toggleFullscreen(gameCardRef); }}
+                        title={t('fullscreen')}
+                    >
+                        <Gamepad2 size={56} color="var(--color-accent)" />
+                        <p style={{ color: 'var(--color-text-secondary)', maxWidth: '420px', margin: 0 }}>{t('gameTagline')}</p>
+                        <span className="btn" style={{ pointerEvents: 'none' }}>{t('gameStart')}</span>
+                        <span style={{ fontSize: '0.8rem', color: 'var(--color-text-secondary)' }}>
+                            {t('gameHighScore')}: {parseInt(localStorage.getItem('neon_galaga_highscore') || '0', 10)}
+                        </span>
+                    </div>
+                    <div className="sg-game-area">
                         <SpaceGame />
                     </div>
                 </div>

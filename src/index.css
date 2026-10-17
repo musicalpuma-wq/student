@@ -576,3 +576,39 @@ th {
   width: 75px;
   height: 75px;
 }
+
+/* Space game launcher card: click opens the game fullscreen */
+.sg-launcher {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.9rem;
+  padding: 2.5rem 2rem;
+  cursor: pointer;
+  text-align: center;
+  border: 2px dashed var(--color-border);
+  border-radius: var(--radius-md);
+  transition: border-color var(--transition-fast), background var(--transition-fast), transform var(--transition-fast);
+}
+
+.sg-launcher:hover {
+  border-color: var(--color-accent);
+  background: rgba(0, 113, 227, 0.05);
+  transform: translateY(-2px);
+}
+
+/* The game canvas only lives inside the fullscreen card */
+.sg-game-area {
+  display: none;
+}
+
+.sg-game-card:fullscreen .sg-launcher {
+  display: none;
+}
+
+.sg-game-card:fullscreen .sg-game-area {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}
