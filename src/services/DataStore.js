@@ -21,6 +21,7 @@ export const DataStore = {
     if (!parsed.materials) parsed.materials = {};
     if (!parsed.courseDetails) parsed.courseDetails = {};
     if (!parsed.gameRecords) parsed.gameRecords = {};
+    if (!parsed.tetrisRecords) parsed.tetrisRecords = {};
     if (!parsed.courses) {
         const derived = [...new Set(parsed.students.map(s => s.course))].sort(compareCourseNames);
         parsed.courses = derived;
@@ -120,6 +121,25 @@ export const DataStore = {
         DataStore.save(data);
     }
     return data.gameRecords[studentId];
+  },
+
+  // Tetris per-player high scores: { [playerId]: { score, date, name } }
+  // playerId is a student id, '__teacher__' or '__director__<course>'; the
+  // display name is stored in the record so it survives roster/staff edits.
+  getTetrisRecords: () => {
+    const data = DataStore.load();
+    return data.tetrisRecords || {};
+  },
+
+  saveTetrisRecord: (playerId, name, score) => {
+    const data = DataStore.load();
+    if (!data.tetrisRecords) data.tetrisRecords = {};
+    const prev = data.tetrisRecords[playerId];
+    if (!prev || score > prev.score) {
+        data.tetrisRecords[playerId] = { score, date: new Date().toISOString(), name };
+        DataStore.save(data);
+    }
+    return data.tetrisRecords[playerId];
   },
 
   // Helper to apply defaults

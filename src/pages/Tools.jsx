@@ -1,9 +1,10 @@
 import { useState, useEffect, useRef } from 'react';
-import { Timer, Music, AudioWaveform, Gamepad2, Play, Pause, Square, RotateCcw, Bell, Maximize2, Minimize2 } from 'lucide-react';
+import { Timer, Music, AudioWaveform, Gamepad2, Blocks, Play, Pause, Square, RotateCcw, Bell, Maximize2, Minimize2 } from 'lucide-react';
 import { useSettings } from '../context/SettingsContext';
 import { useTimer } from '../context/TimerContext';
 import { getAudioContext, playBlip, formatTime } from '../utils/audioUtils';
 import { SpaceGame } from '../components/SpaceGame';
+import { TetrisGame } from '../components/TetrisGame';
 
 // Available tone-generator timbres: native oscillator types + custom PeriodicWaves
 const TIMBRES = [
@@ -97,6 +98,7 @@ export function Tools() {
     const metronomeCardRef = useRef(null);
     const toneCardRef = useRef(null);
     const gameCardRef = useRef(null);
+    const tetrisCardRef = useRef(null);
 
     useEffect(() => {
         const onChange = () => setFullscreenActive(!!document.fullscreenElement);
@@ -605,6 +607,29 @@ export function Tools() {
                     </div>
                     <div className="sg-game-area">
                         <SpaceGame />
+                    </div>
+                </div>
+
+                {/* Tetris Game — launcher card; the game itself renders in fullscreen */}
+                <div ref={tetrisCardRef} className="card sg-game-card" style={{ gridColumn: '1 / -1', display: 'flex', flexDirection: 'column' }}>
+                    <div style={cardHeaderStyle}>
+                        <h3 style={sectionTitleStyle}><Blocks size={22} color="var(--color-accent)" /> {t('tetrisGame')}</h3>
+                        <FullscreenButton targetRef={tetrisCardRef} {...fsButtonProps} />
+                    </div>
+                    <div
+                        className="sg-launcher"
+                        onClick={() => toggleFullscreen(tetrisCardRef)}
+                        role="button"
+                        tabIndex={0}
+                        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') toggleFullscreen(tetrisCardRef); }}
+                        title={t('fullscreen')}
+                    >
+                        <Blocks size={56} color="var(--color-accent)" />
+                        <p style={{ color: 'var(--color-text-secondary)', maxWidth: '420px', margin: 0 }}>{t('tetrisTagline')}</p>
+                        <span className="btn" style={{ pointerEvents: 'none' }}>{t('gameStart')}</span>
+                    </div>
+                    <div className="sg-game-area">
+                        <TetrisGame />
                     </div>
                 </div>
             </div>

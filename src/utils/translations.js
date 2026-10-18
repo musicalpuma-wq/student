@@ -244,6 +244,16 @@ export const translations = {
     gameNewRecord: "¡Nuevo récord!",
     gameNoRecordYet: "Aún no hay récord de alumnos",
 
+    // Tetris game
+    tetrisGame: "Bloques Neón",
+    tetrisTagline: "Apila las piezas, completa líneas y haz estallar el neón.",
+    tetrisControls: "[← →] Mover · [↓] Caída suave · [↑] Girar · [Espacio] Caída rápida · [P] Pausa",
+    gameStaffGroup: "Profe y directores",
+    gameTeacherFallback: "Profesor/a",
+    gameLevel: "Nivel",
+    gameLines: "Líneas",
+    gameNoChampionYet: "Aún no hay récord",
+
     // Floating timer
     backToTools: "Volver a Herramientas",
 
@@ -521,6 +531,16 @@ export const translations = {
     gamePersonalBest: "Your record",
     gameNewRecord: "New record!",
     gameNoRecordYet: "No student record yet",
+
+    // Tetris game
+    tetrisGame: "Neon Blocks",
+    tetrisTagline: "Stack the pieces, clear lines and make the neon burst.",
+    tetrisControls: "[← →] Move · [↓] Soft drop · [↑] Rotate · [Space] Hard drop · [P] Pause",
+    gameStaffGroup: "Teacher & directors",
+    gameTeacherFallback: "Teacher",
+    gameLevel: "Level",
+    gameLines: "Lines",
+    gameNoChampionYet: "No record yet",
 
     // Floating timer
     backToTools: "Back to Tools",

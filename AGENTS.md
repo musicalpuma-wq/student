@@ -101,8 +101,9 @@ src/
                             accents), tone generator (chromatic scale, custom
                             Hz, dedicated A440, 5-octave piano keyboard C2–B6,
                             6 timbres: sine/triangle/square/sawtooth plus
-                            piano and organ via PeriodicWave), and the
-                            SpaceGame (Neon Galaga canvas shooter).
+                            piano and organ via PeriodicWave), the
+                            SpaceGame (Neon Galaga canvas shooter) and the
+                            TetrisGame (glow-neon Tetris clone).
                             All sound uses the Web Audio API; no audio assets.
   components/
     Layout.jsx              Shell with Sidebar + <Outlet/>; owns the collapsed
@@ -121,6 +122,15 @@ src/
                             the current record holder; per-student records are
                             stored in DataStore `gameRecords` (guest scores are
                             not saved)
+    TetrisGame.jsx          Neon Blocks: glow-neon Tetris clone (canvas, own
+                            Web Audio synth, touch controls, ghost piece,
+                            7-bag randomizer). Player selector lists the
+                            teacher and group directors alongside students by
+                            course (or guest); per-player records are stored
+                            in DataStore `tetrisRecords` with the name
+                            embedded, shown with score + date (guest scores
+                            are not saved). Reuses the `sg-*` overlay/launcher
+                            styles from SpaceGame
     RandomPickerModal.jsx   Random student picker with roulette animation and
                             sounds; modes: no-repeat (pool of pickedIds kept by
                             CourseGradebook) or repeats allowed
@@ -168,6 +178,10 @@ exclusively through `src/services/DataStore.js`:
   activities: { 'period_courseName': [ { id, name, date, locked } ] },
   materials:  { 'period_courseName': [ { id, name } ] },
   gameRecords: { studentId: { score, date } }   // SpaceGame per-student best
+  tetrisRecords: { playerId: { score, date, name } }   // Tetris per-player best;
+                            // playerId is a student id, '__teacher__' or
+                            // '__director__<course>'; name is embedded so the
+                            // record display survives roster/staff edits
 }
 ```
 
@@ -198,7 +212,8 @@ chart, keyed by period: `{ [period]: [courseName] }`),
 `sms_sidebar_collapsed` (`'1'` when the sidebar is collapsed to icons),
 `neon_galaga_highscore` (legacy SpaceGame high score — now read-only baseline;
 current records live in `gameRecords` inside `sms_data_v1`),
-`neon_galaga_player` (last selected SpaceGame player id).
+`neon_galaga_player` (last selected SpaceGame player id),
+`neon_tetris_player` (last selected Tetris player id).
 
 `settings.dashboardHidden` hides courses from the whole Dashboard (course
 cards, quick-access dropdown and performance chart) without deleting them,
