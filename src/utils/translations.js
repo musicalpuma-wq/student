@@ -237,6 +237,12 @@ export const translations = {
     gamePlayAgain: "Jugar de Nuevo",
     gameControls: "[Flechas/AD] Mover · [Espacio] Disparar · [P] Pausa",
     gameTagline: "Defiende la red cibernética contra hordas de naves neón.",
+    gameChampion: "Récord actual",
+    gameSelectPlayer: "Jugador",
+    gameGuestOption: "Sin asignar (invitado)",
+    gamePersonalBest: "Tu récord",
+    gameNewRecord: "¡Nuevo récord!",
+    gameNoRecordYet: "Aún no hay récord de alumnos",
 
     // Floating timer
     backToTools: "Volver a Herramientas",
@@ -509,6 +515,12 @@ export const translations = {
     gamePlayAgain: "Play Again",
     gameControls: "[Arrows/AD] Move · [Space] Fire · [P] Pause",
     gameTagline: "Defend the cyber network against hordes of neon ships.",
+    gameChampion: "Current record",
+    gameSelectPlayer: "Player",
+    gameGuestOption: "Unassigned (guest)",
+    gamePersonalBest: "Your record",
+    gameNewRecord: "New record!",
+    gameNoRecordYet: "No student record yet",
 
     // Floating timer
     backToTools: "Back to Tools",

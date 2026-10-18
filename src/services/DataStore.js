@@ -20,6 +20,7 @@ export const DataStore = {
     // Basic field defaults
     if (!parsed.materials) parsed.materials = {};
     if (!parsed.courseDetails) parsed.courseDetails = {};
+    if (!parsed.gameRecords) parsed.gameRecords = {};
     if (!parsed.courses) {
         const derived = [...new Set(parsed.students.map(s => s.course))].sort(compareCourseNames);
         parsed.courses = derived;
@@ -102,6 +103,23 @@ export const DataStore = {
   getStudents: () => {
     const data = DataStore.load();
     return data.students;
+  },
+
+  // SpaceGame per-student high scores: { [studentId]: { score, date } }
+  getGameRecords: () => {
+    const data = DataStore.load();
+    return data.gameRecords || {};
+  },
+
+  saveGameRecord: (studentId, score) => {
+    const data = DataStore.load();
+    if (!data.gameRecords) data.gameRecords = {};
+    const prev = data.gameRecords[studentId];
+    if (!prev || score > prev.score) {
+        data.gameRecords[studentId] = { score, date: new Date().toISOString() };
+        DataStore.save(data);
+    }
+    return data.gameRecords[studentId];
   },
 
   // Helper to apply defaults

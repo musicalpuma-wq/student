@@ -1,16 +1,33 @@
 import { useState, useEffect, useRef } from 'react';
 import { useSettings } from '../context/SettingsContext';
+import { DataStore } from '../services/DataStore';
 
 /*
  * Neon Galaga — canvas space shooter ported from the standalone naves.html.
- * Self-contained: no external fonts/libraries, Web Audio synth, high score in
- * localStorage ('neon_galaga_highscore'). All mutable game state lives inside
- * the mount effect; React state only mirrors gameState/score for the overlays.
+ * Self-contained: no external fonts/libraries, Web Audio synth. One life per
+ * run. Per-student high scores are persisted via DataStore ('gameRecords');
+ * 'neon_galaga_highscore' survives only as a legacy read-only baseline.
+ * All mutable game state lives inside the mount effect; React state only
+ * mirrors gameState/score for the overlays.
  *
  * Performance note: ctx.shadowBlur is NOT used (it is extremely expensive and
  * stalls the main thread when applied to many entities per frame). The neon
  * glow is faked with a wide translucent under-stroke, which is far cheaper.
  */
+
+// Highest record among existing students (records of deleted students are ignored)
+const computeChampion = (records, students) => {
+    let champion = null;
+    for (const [studentId, rec] of Object.entries(records || {})) {
+        const student = students.find(s => s.id === studentId);
+        if (!student || !rec) continue;
+        if (!champion || rec.score > champion.score) {
+            champion = { studentId, name: student.name, course: student.course, score: rec.score, date: rec.date };
+        }
+    }
+    return champion;
+};
+
 export function SpaceGame() {
     const { t } = useSettings();
     const containerRef = useRef(null);
@@ -19,8 +36,29 @@ export function SpaceGame() {
     const touchStateRef = useRef({ left: false, right: false, fire: false });
     const [gameState, setGameState] = useState('START'); // START | PLAYING | PAUSED | GAMEOVER
     const [finalScore, setFinalScore] = useState(0);
-    const [highScore, setHighScore] = useState(() => parseInt(localStorage.getItem('neon_galaga_highscore') || '0', 10));
+    const [students] = useState(() => DataStore.getStudents());
+    const [courses] = useState(() => DataStore.getCourses());
+    const [records, setRecords] = useState(() => DataStore.getGameRecords());
+    const [selectedPlayerId, setSelectedPlayerId] = useState(() => localStorage.getItem('neon_galaga_player') || '');
+    const [isNewChampion, setIsNewChampion] = useState(false);
+    // Mirror of selectedPlayerId readable from inside the mount-effect engine
+    const playerRef = useRef(localStorage.getItem('neon_galaga_player') || '');
+    const [highScore, setHighScore] = useState(() => {
+        const legacy = parseInt(localStorage.getItem('neon_galaga_highscore') || '0', 10);
+        const champ = computeChampion(DataStore.getGameRecords(), DataStore.getStudents());
+        return Math.max(legacy, champ ? champ.score : 0);
+    });
     const isTouchDevice = ('ontouchstart' in window) || navigator.maxTouchPoints > 0;
+
+    const champion = computeChampion(records, students);
+    const selectedPlayerRecord = records[selectedPlayerId] || null;
+
+    const handlePlayerSelect = (e) => {
+        const id = e.target.value;
+        playerRef.current = id;
+        setSelectedPlayerId(id);
+        localStorage.setItem('neon_galaga_player', id);
+    };
 
     useEffect(() => {
         // Web Audio API Synthesizer (zero external dependencies)
@@ -195,7 +233,11 @@ export function SpaceGame() {
 
         let gameStateLocal = 'START'; // START, PLAYING, PAUSED, GAMEOVER
         let score = 0;
-        let high = parseInt(localStorage.getItem('neon_galaga_highscore') || '0', 10);
+        const engineChampion = computeChampion(DataStore.getGameRecords(), DataStore.getStudents());
+        let high = Math.max(
+            parseInt(localStorage.getItem('neon_galaga_highscore') || '0', 10),
+            engineChampion ? engineChampion.score : 0
+        );
         let wave = 1;
         let combo = 1;
         let comboTimer = 0;
@@ -347,7 +389,7 @@ export function SpaceGame() {
                 this.y = y;
                 this.size = 15;
                 this.speed = 2;
-                const types = ['SPREAD', 'BEAM', 'SHIELD', 'LIFE', 'BOMB'];
+                const types = ['SPREAD', 'BEAM', 'SHIELD', 'BOMB'];
                 this.type = types[Math.floor(Math.random() * types.length)];
                 this.angle = 0;
 
@@ -355,7 +397,6 @@ export function SpaceGame() {
                     'SPREAD': '#00f3ff',
                     'BEAM': '#ff0055',
                     'SHIELD': '#39ff14',
-                    'LIFE': '#ff00aa',
                     'BOMB': '#ffe600'
                 };
             }
@@ -396,8 +437,8 @@ export function SpaceGame() {
                 this.x = canvas.width / 2;
                 this.y = canvas.height - 70;
                 this.speed = 7;
-                this.lives = 3;
-                this.maxLives = 5;
+                this.lives = 1; // One life per run: first unshielded hit ends the game
+                this.maxLives = 1;
                 this.shield = 0; // Shield hit counter
                 this.weapon = 'NORMAL'; // NORMAL, SPREAD, BEAM
                 this.weaponTimer = 0;
@@ -409,7 +450,7 @@ export function SpaceGame() {
             reset() {
                 this.x = canvas.width / 2;
                 this.y = canvas.height - 70;
-                this.lives = 3;
+                this.lives = 1;
                 this.shield = 0;
                 this.weapon = 'NORMAL';
                 this.weaponTimer = 0;
@@ -827,8 +868,6 @@ export function SpaceGame() {
                 player.shootDelay = 80;
             } else if (type === 'SHIELD') {
                 player.shield = 2;
-            } else if (type === 'LIFE') {
-                if (player.lives < player.maxLives) player.lives++;
             } else if (type === 'BOMB') {
                 screenShake = 20;
                 sound.playExplosion(true);
@@ -991,9 +1030,18 @@ export function SpaceGame() {
             syncState('GAMEOVER');
             sound.stopBGM();
 
-            if (score > high) {
-                high = score;
-                localStorage.setItem('neon_galaga_highscore', high.toString());
+            // Only assigned students get their record saved; guest scores are discarded
+            const playerId = playerRef.current;
+            const playerExists = playerId && DataStore.getStudents().some(s => s.id === playerId);
+            if (playerExists) {
+                const prevChampion = computeChampion(DataStore.getGameRecords(), DataStore.getStudents());
+                const prevChampionScore = prevChampion ? prevChampion.score : 0;
+                DataStore.saveGameRecord(playerId, score);
+                setRecords(DataStore.getGameRecords());
+                setIsNewChampion(score > prevChampionScore && score > 0);
+                if (score > high) high = score;
+            } else {
+                setIsNewChampion(false);
             }
 
             setFinalScore(score);
@@ -1055,9 +1103,59 @@ export function SpaceGame() {
                 <div className="sg-overlay">
                     <h2 className="sg-neon-title">{t('spaceGame')}</h2>
                     <div className="sg-neon-subtitle">CYBERPUNK INVASION</div>
-                    <p style={{ color: '#67e8f9', marginBottom: '1.5rem', fontSize: '0.9rem', maxWidth: '420px' }}>
+                    <p style={{ color: '#67e8f9', marginBottom: '1rem', fontSize: '0.9rem', maxWidth: '420px' }}>
                         {t('gameTagline')}
                     </p>
+
+                    {/* Current record holder */}
+                    <div style={{ marginBottom: '1rem', fontSize: '0.95rem', textAlign: 'center', maxWidth: '420px' }}>
+                        {champion ? (
+                            <span style={{ color: '#facc15', fontWeight: 700 }}>
+                                🏆 {t('gameChampion')}: {champion.name} · {champion.course} · {champion.score}
+                            </span>
+                        ) : (
+                            <span style={{ color: '#94a3b8' }}>{t('gameNoRecordYet')}</span>
+                        )}
+                    </div>
+
+                    {/* Player selector */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: selectedPlayerRecord ? '0.25rem' : '1.5rem' }}>
+                        <label htmlFor="sg-player-select" style={{ color: '#67e8f9', fontSize: '0.85rem' }}>{t('gameSelectPlayer')}:</label>
+                        <select
+                            id="sg-player-select"
+                            value={students.some(s => s.id === selectedPlayerId) ? selectedPlayerId : ''}
+                            onChange={handlePlayerSelect}
+                            style={{
+                                background: '#0a0a14',
+                                color: '#e2e8f0',
+                                border: '1px solid #00f3ff',
+                                borderRadius: '6px',
+                                padding: '6px 10px',
+                                fontSize: '0.85rem',
+                                fontFamily: 'monospace',
+                                maxWidth: '240px'
+                            }}
+                        >
+                            <option value="">{t('gameGuestOption')}</option>
+                            {courses.map(course => {
+                                const courseStudents = students
+                                    .filter(s => s.course === course)
+                                    .sort((a, b) => a.name.localeCompare(b.name));
+                                if (courseStudents.length === 0) return null;
+                                return (
+                                    <optgroup key={course} label={course}>
+                                        {courseStudents.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                                    </optgroup>
+                                );
+                            })}
+                        </select>
+                    </div>
+                    {selectedPlayerRecord && (
+                        <div style={{ marginBottom: '1.25rem', fontSize: '0.8rem', color: '#22d3ee' }}>
+                            {t('gamePersonalBest')}: {selectedPlayerRecord.score}
+                        </div>
+                    )}
+
                     <button className="sg-neon-button" onClick={() => engineRef.current.startGame()}>
                         {t('gameStart')}
                     </button>
@@ -1080,9 +1178,19 @@ export function SpaceGame() {
             {gameState === 'GAMEOVER' && (
                 <div className="sg-overlay">
                     <h2 className="sg-neon-title sg-neon-title-pink">{t('gameOver')}</h2>
+                    {isNewChampion && (
+                        <div style={{ fontSize: '1.2rem', fontWeight: 700, color: '#facc15' }}>
+                            🏆 {t('gameNewRecord')}
+                        </div>
+                    )}
                     <div style={{ fontSize: '1.4rem', fontWeight: 700, margin: '0.5rem 0', color: '#22d3ee' }}>
                         {t('gameScore')}: {finalScore}
                     </div>
+                    {selectedPlayerRecord && (
+                        <div style={{ fontSize: '1rem', color: '#67e8f9', marginBottom: '0.25rem' }}>
+                            {t('gamePersonalBest')}: {selectedPlayerRecord.score}
+                        </div>
+                    )}
                     <div style={{ fontSize: '1.1rem', color: '#facc15', marginBottom: '1.5rem' }}>
                         {t('gameHighScore')}: {highScore}
                     </div>

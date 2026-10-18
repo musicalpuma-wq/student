@@ -115,7 +115,12 @@ src/
     FloatingTimer.jsx       Corner widget mirroring the global timer when it
                             runs (or rings) outside /tools; click returns there
     SpaceGame.jsx           Neon Galaga: canvas space shooter (own Web Audio
-                            synth, high score in localStorage, touch controls)
+                            synth, touch controls). One life per run (no LIFE
+                            power-up). The start screen has a player selector
+                            (students grouped by course, or guest) and shows
+                            the current record holder; per-student records are
+                            stored in DataStore `gameRecords` (guest scores are
+                            not saved)
     RandomPickerModal.jsx   Random student picker with roulette animation and
                             sounds; modes: no-repeat (pool of pickedIds kept by
                             CourseGradebook) or repeats allowed
@@ -161,7 +166,8 @@ exclusively through `src/services/DataStore.js`:
   courses: [ 'CourseName', ... ],          // explicit, sorted list
   courseDetails: { courseName: { director, schedule } },
   activities: { 'period_courseName': [ { id, name, date, locked } ] },
-  materials:  { 'period_courseName': [ { id, name } ] }
+  materials:  { 'period_courseName': [ { id, name } ] },
+  gameRecords: { studentId: { score, date } }   // SpaceGame per-student best
 }
 ```
 
@@ -190,7 +196,9 @@ password), `sms_late_times` (late-arrival time cache in CourseGradebook),
 `sms_perf_chart_hidden` (courses hidden from the Dashboard performance
 chart, keyed by period: `{ [period]: [courseName] }`),
 `sms_sidebar_collapsed` (`'1'` when the sidebar is collapsed to icons),
-`neon_galaga_highscore` (SpaceGame high score).
+`neon_galaga_highscore` (legacy SpaceGame high score — now read-only baseline;
+current records live in `gameRecords` inside `sms_data_v1`),
+`neon_galaga_player` (last selected SpaceGame player id).
 
 `settings.dashboardHidden` hides courses from the whole Dashboard (course
 cards, quick-access dropdown and performance chart) without deleting them,
