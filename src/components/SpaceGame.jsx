@@ -1,11 +1,13 @@
 import { useState, useEffect, useRef } from 'react';
 import { useSettings } from '../context/SettingsContext';
 import { DataStore } from '../services/DataStore';
+import { computeGameChampion, buildStaffDirectors, formatRecordDate } from '../utils/gameUtils';
 
 /*
  * Neon Galaga — canvas space shooter ported from the standalone naves.html.
  * Self-contained: no external fonts/libraries, Web Audio synth. One life per
- * run. Per-student high scores are persisted via DataStore ('gameRecords');
+ * run. Per-player high scores (students, the teacher and group directors) are
+ * persisted via DataStore ('gameRecords', name embedded in new records);
  * 'neon_galaga_highscore' survives only as a legacy read-only baseline.
  * All mutable game state lives inside the mount effect; React state only
  * mirrors gameState/score for the overlays.
@@ -15,21 +17,8 @@ import { DataStore } from '../services/DataStore';
  * glow is faked with a wide translucent under-stroke, which is far cheaper.
  */
 
-// Highest record among existing students (records of deleted students are ignored)
-const computeChampion = (records, students) => {
-    let champion = null;
-    for (const [studentId, rec] of Object.entries(records || {})) {
-        const student = students.find(s => s.id === studentId);
-        if (!student || !rec) continue;
-        if (!champion || rec.score > champion.score) {
-            champion = { studentId, name: student.name, course: student.course, score: rec.score, date: rec.date };
-        }
-    }
-    return champion;
-};
-
 export function SpaceGame() {
-    const { t } = useSettings();
+    const { t, settings } = useSettings();
     const containerRef = useRef(null);
     const canvasRef = useRef(null);
     const engineRef = useRef({ startGame: () => {}, togglePause: () => {}, moveTo: () => {}, initSound: () => {} });
@@ -39,18 +28,28 @@ export function SpaceGame() {
     const [students] = useState(() => DataStore.getStudents());
     const [courses] = useState(() => DataStore.getCourses());
     const [records, setRecords] = useState(() => DataStore.getGameRecords());
+    const [directors] = useState(() => buildStaffDirectors());
     const [selectedPlayerId, setSelectedPlayerId] = useState(() => localStorage.getItem('neon_galaga_player') || '');
     const [isNewChampion, setIsNewChampion] = useState(false);
     // Mirror of selectedPlayerId readable from inside the mount-effect engine
     const playerRef = useRef(localStorage.getItem('neon_galaga_player') || '');
     const [highScore, setHighScore] = useState(() => {
         const legacy = parseInt(localStorage.getItem('neon_galaga_highscore') || '0', 10);
-        const champ = computeChampion(DataStore.getGameRecords(), DataStore.getStudents());
+        const champ = computeGameChampion(DataStore.getGameRecords(), DataStore.getStudents());
         return Math.max(legacy, champ ? champ.score : 0);
     });
     const isTouchDevice = ('ontouchstart' in window) || navigator.maxTouchPoints > 0;
 
-    const champion = computeChampion(records, students);
+    const teacherDisplay = (settings.teacherName || '').trim() || t('gameTeacherFallback');
+
+    // id -> display name for every valid player (read by the engine at game over)
+    const playerDirectory = { __teacher__: teacherDisplay };
+    students.forEach(s => { playerDirectory[s.id] = s.name; });
+    directors.forEach(d => { playerDirectory[d.id] = d.name; });
+    const directoryRef = useRef(playerDirectory);
+    directoryRef.current = playerDirectory;
+
+    const champion = computeGameChampion(records, students);
     const selectedPlayerRecord = records[selectedPlayerId] || null;
 
     const handlePlayerSelect = (e) => {
@@ -233,11 +232,12 @@ export function SpaceGame() {
 
         let gameStateLocal = 'START'; // START, PLAYING, PAUSED, GAMEOVER
         let score = 0;
-        const engineChampion = computeChampion(DataStore.getGameRecords(), DataStore.getStudents());
+        const engineChampion = computeGameChampion(DataStore.getGameRecords(), DataStore.getStudents());
         let high = Math.max(
             parseInt(localStorage.getItem('neon_galaga_highscore') || '0', 10),
             engineChampion ? engineChampion.score : 0
         );
+        let championName = engineChampion ? engineChampion.name : '';
         let wave = 1;
         let combo = 1;
         let comboTimer = 0;
@@ -894,10 +894,15 @@ export function SpaceGame() {
                 ctx.fillText(`COMBO x${combo}`, 20, 85);
             }
 
-            // High Score
+            // High Score + record holder name (always visible while playing)
             ctx.textAlign = 'right';
             ctx.fillStyle = '#ff0055';
             ctx.fillText(`HIGH: ${high}`, canvas.width - 20, 35);
+            if (championName) {
+                ctx.font = 'bold 11px monospace';
+                ctx.fillText(`★ ${championName.toUpperCase().slice(0, 20)}`, canvas.width - 20, 76);
+                ctx.font = 'bold 14px monospace';
+            }
 
             // Lives Mini Icons
             ctx.strokeStyle = '#00f3ff';
@@ -1030,16 +1035,19 @@ export function SpaceGame() {
             syncState('GAMEOVER');
             sound.stopBGM();
 
-            // Only assigned students get their record saved; guest scores are discarded
+            // Only assigned players get their record saved; guest scores are discarded
             const playerId = playerRef.current;
-            const playerExists = playerId && DataStore.getStudents().some(s => s.id === playerId);
-            if (playerExists) {
-                const prevChampion = computeChampion(DataStore.getGameRecords(), DataStore.getStudents());
+            const name = playerId ? directoryRef.current[playerId] : null;
+            if (name) {
+                const prevChampion = computeGameChampion(DataStore.getGameRecords(), DataStore.getStudents());
                 const prevChampionScore = prevChampion ? prevChampion.score : 0;
-                DataStore.saveGameRecord(playerId, score);
-                setRecords(DataStore.getGameRecords());
+                DataStore.saveGameRecord(playerId, score, name);
+                const updated = DataStore.getGameRecords();
+                setRecords(updated);
                 setIsNewChampion(score > prevChampionScore && score > 0);
                 if (score > high) high = score;
+                const newChampion = computeGameChampion(updated, DataStore.getStudents());
+                championName = newChampion ? newChampion.name : '';
             } else {
                 setIsNewChampion(false);
             }
@@ -1107,23 +1115,23 @@ export function SpaceGame() {
                         {t('gameTagline')}
                     </p>
 
-                    {/* Current record holder */}
+                    {/* Current record holder: name + score + date */}
                     <div style={{ marginBottom: '1rem', fontSize: '0.95rem', textAlign: 'center', maxWidth: '420px' }}>
                         {champion ? (
                             <span style={{ color: '#facc15', fontWeight: 700 }}>
-                                🏆 {t('gameChampion')}: {champion.name} · {champion.course} · {champion.score}
+                                🏆 {t('gameChampion')}: {champion.name}{champion.course ? ` · ${champion.course}` : ''} · {champion.score} · {formatRecordDate(champion.date, settings.language)}
                             </span>
                         ) : (
-                            <span style={{ color: '#94a3b8' }}>{t('gameNoRecordYet')}</span>
+                            <span style={{ color: '#94a3b8' }}>{t('gameNoChampionYet')}</span>
                         )}
                     </div>
 
-                    {/* Player selector */}
+                    {/* Player selector: teacher + directors + students by course */}
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: selectedPlayerRecord ? '0.25rem' : '1.5rem' }}>
                         <label htmlFor="sg-player-select" style={{ color: '#67e8f9', fontSize: '0.85rem' }}>{t('gameSelectPlayer')}:</label>
                         <select
                             id="sg-player-select"
-                            value={students.some(s => s.id === selectedPlayerId) ? selectedPlayerId : ''}
+                            value={playerDirectory[selectedPlayerId] ? selectedPlayerId : ''}
                             onChange={handlePlayerSelect}
                             style={{
                                 background: '#0a0a14',
@@ -1137,6 +1145,12 @@ export function SpaceGame() {
                             }}
                         >
                             <option value="">{t('gameGuestOption')}</option>
+                            <optgroup label={t('gameStaffGroup')}>
+                                <option value="__teacher__">{teacherDisplay}</option>
+                                {directors.map(d => (
+                                    <option key={d.id} value={d.id}>{d.name} · Dir. {d.course}</option>
+                                ))}
+                            </optgroup>
                             {courses.map(course => {
                                 const courseStudents = students
                                     .filter(s => s.course === course)
@@ -1152,7 +1166,7 @@ export function SpaceGame() {
                     </div>
                     {selectedPlayerRecord && (
                         <div style={{ marginBottom: '1.25rem', fontSize: '0.8rem', color: '#22d3ee' }}>
-                            {t('gamePersonalBest')}: {selectedPlayerRecord.score}
+                            {t('gamePersonalBest')}: {selectedPlayerRecord.score} · {formatRecordDate(selectedPlayerRecord.date, settings.language)}
                         </div>
                     )}
 
@@ -1188,12 +1202,17 @@ export function SpaceGame() {
                     </div>
                     {selectedPlayerRecord && (
                         <div style={{ fontSize: '1rem', color: '#67e8f9', marginBottom: '0.25rem' }}>
-                            {t('gamePersonalBest')}: {selectedPlayerRecord.score}
+                            {t('gamePersonalBest')}: {selectedPlayerRecord.score} · {formatRecordDate(selectedPlayerRecord.date, settings.language)}
                         </div>
                     )}
-                    <div style={{ fontSize: '1.1rem', color: '#facc15', marginBottom: '1.5rem' }}>
+                    <div style={{ fontSize: '1.1rem', color: '#facc15', marginBottom: champion ? '0.25rem' : '1.5rem' }}>
                         {t('gameHighScore')}: {highScore}
                     </div>
+                    {champion && (
+                        <div style={{ fontSize: '1rem', color: '#facc15', marginBottom: '1.5rem' }}>
+                            🏆 {t('gameChampion')}: {champion.name} · {champion.score} · {formatRecordDate(champion.date, settings.language)}
+                        </div>
+                    )}
                     <button className="sg-neon-button" onClick={() => engineRef.current.startGame()}>
                         {t('gamePlayAgain')}
                     </button>

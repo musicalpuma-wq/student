@@ -3,6 +3,8 @@ import { Timer, Music, AudioWaveform, Gamepad2, Blocks, Play, Pause, Square, Rot
 import { useSettings } from '../context/SettingsContext';
 import { useTimer } from '../context/TimerContext';
 import { getAudioContext, playBlip, formatTime } from '../utils/audioUtils';
+import { DataStore } from '../services/DataStore';
+import { computeGameChampion } from '../utils/gameUtils';
 import { SpaceGame } from '../components/SpaceGame';
 import { TetrisGame } from '../components/TetrisGame';
 
@@ -119,6 +121,13 @@ export function Tools() {
         onToggle: toggleFullscreen,
         titleActive: t('exitFullscreen'),
         titleInactive: t('fullscreen'),
+    };
+
+    // Record holders shown on the game launcher cards. Computed at render so
+    // they stay fresh after playing (the page re-renders on fullscreen exit)
+    const gameChampions = {
+        space: computeGameChampion(DataStore.getGameRecords(), DataStore.getStudents()),
+        tetris: computeGameChampion(DataStore.getTetrisRecords()),
     };
 
     // ---------------- Metronome ----------------
@@ -601,9 +610,15 @@ export function Tools() {
                         <Gamepad2 size={56} color="var(--color-accent)" />
                         <p style={{ color: 'var(--color-text-secondary)', maxWidth: '420px', margin: 0 }}>{t('gameTagline')}</p>
                         <span className="btn" style={{ pointerEvents: 'none' }}>{t('gameStart')}</span>
-                        <span style={{ fontSize: '0.8rem', color: 'var(--color-text-secondary)' }}>
-                            {t('gameHighScore')}: {parseInt(localStorage.getItem('neon_galaga_highscore') || '0', 10)}
-                        </span>
+                        {gameChampions.space ? (
+                            <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--color-warning)' }}>
+                                🏆 {gameChampions.space.name} · {gameChampions.space.score}
+                            </span>
+                        ) : (
+                            <span style={{ fontSize: '0.8rem', color: 'var(--color-text-secondary)' }}>
+                                {t('gameHighScore')}: {parseInt(localStorage.getItem('neon_galaga_highscore') || '0', 10)}
+                            </span>
+                        )}
                     </div>
                     <div className="sg-game-area">
                         <SpaceGame />
@@ -627,6 +642,11 @@ export function Tools() {
                         <Blocks size={56} color="var(--color-accent)" />
                         <p style={{ color: 'var(--color-text-secondary)', maxWidth: '420px', margin: 0 }}>{t('tetrisTagline')}</p>
                         <span className="btn" style={{ pointerEvents: 'none' }}>{t('gameStart')}</span>
+                        {gameChampions.tetris && (
+                            <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--color-warning)' }}>
+                                🏆 {gameChampions.tetris.name} · {gameChampions.tetris.score}
+                            </span>
+                        )}
                     </div>
                     <div className="sg-game-area">
                         <TetrisGame />

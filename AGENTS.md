@@ -118,10 +118,13 @@ src/
     SpaceGame.jsx           Neon Galaga: canvas space shooter (own Web Audio
                             synth, touch controls). One life per run (no LIFE
                             power-up). The start screen has a player selector
-                            (students grouped by course, or guest) and shows
-                            the current record holder; per-student records are
-                            stored in DataStore `gameRecords` (guest scores are
-                            not saved)
+                            (students grouped by course, the teacher and group
+                            directors, or guest) and shows the current record
+                            holder with score + date; per-player records are
+                            stored in DataStore `gameRecords` with the name
+                            embedded in new records (guest scores are not
+                            saved). The record holder is also shown on the
+                            Tools launcher card and in the in-game HUD
     TetrisGame.jsx          Neon Blocks: glow-neon Tetris clone (canvas, own
                             Web Audio synth, touch controls, ghost piece,
                             7-bag randomizer). Player selector lists the
@@ -130,7 +133,8 @@ src/
                             in DataStore `tetrisRecords` with the name
                             embedded, shown with score + date (guest scores
                             are not saved). Reuses the `sg-*` overlay/launcher
-                            styles from SpaceGame
+                            styles from SpaceGame. The record holder is also
+                            shown on the Tools launcher card and in the HUD
     RandomPickerModal.jsx   Random student picker with roulette animation and
                             sounds; modes: no-repeat (pool of pickedIds kept by
                             CourseGradebook) or repeats allowed
@@ -146,6 +150,8 @@ src/
     translations.js         es/en string tables
     spriteUtils.js          Mascot sprite-sheet helpers (course animal by hash)
     audioUtils.js           Shared lazy AudioContext, playBlip, formatTime
+    gameUtils.js            Shared game helpers: champion computation, staff
+                            player list (teacher/directors), record date format
     gradeUtils.js           Grade digit-shorthand formatter ("45" -> "4.5")
                             and ±25% evaluation-range helpers
   assets/mascots/           PNG sprite sheets (dog, bear, fox; 5 expressions each)
@@ -177,7 +183,10 @@ exclusively through `src/services/DataStore.js`:
   courseDetails: { courseName: { director, schedule } },
   activities: { 'period_courseName': [ { id, name, date, locked } ] },
   materials:  { 'period_courseName': [ { id, name } ] },
-  gameRecords: { studentId: { score, date } }   // SpaceGame per-student best
+  gameRecords: { playerId: { score, date, name? } }   // SpaceGame per-player
+                            // best; playerId is a student id, '__teacher__' or
+                            // '__director__<course>'; name is embedded in new
+                            // records (legacy records resolve via the roster)
   tetrisRecords: { playerId: { score, date, name } }   // Tetris per-player best;
                             // playerId is a student id, '__teacher__' or
                             // '__director__<course>'; name is embedded so the

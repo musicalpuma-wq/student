@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useSettings } from '../context/SettingsContext';
 import { DataStore } from '../services/DataStore';
+import { computeGameChampion, buildStaffDirectors, formatRecordDate } from '../utils/gameUtils';
 
 /*
  * Neon Blocks — glow-neon Tetris clone. Canvas renderer, 7-bag randomizer,
@@ -37,19 +38,6 @@ const LINE_POINTS = [0, 100, 300, 500, 800];
 const rotateCW = (matrix) => matrix[0].map((_, i) => matrix.map(row => row[i]).reverse());
 const rotateCCW = (matrix) => matrix[0].map((_, i) => matrix.map(row => row[row.length - 1 - i]));
 
-// Highest record. The display name is embedded in the record itself, so it
-// works for students, the teacher and directors, and survives roster edits.
-const computeChampion = (records) => {
-    let champion = null;
-    for (const [playerId, rec] of Object.entries(records || {})) {
-        if (!rec) continue;
-        if (!champion || rec.score > champion.score) {
-            champion = { playerId, name: rec.name, score: rec.score, date: rec.date };
-        }
-    }
-    return champion;
-};
-
 export function TetrisGame() {
     const { t, settings } = useSettings();
     const containerRef = useRef(null);
@@ -65,14 +53,7 @@ export function TetrisGame() {
     const [finalLevel, setFinalLevel] = useState(1);
     const [students] = useState(() => DataStore.getStudents());
     const [courses] = useState(() => DataStore.getCourses());
-    const [directors] = useState(() =>
-        DataStore.getCourses()
-            .map(course => {
-                const name = (DataStore.getCourseDetails(course).director || '').trim();
-                return name ? { id: `__director__${course}`, name, course } : null;
-            })
-            .filter(Boolean)
-    );
+    const [directors] = useState(() => buildStaffDirectors());
     const [records, setRecords] = useState(() => DataStore.getTetrisRecords());
     const [selectedPlayerId, setSelectedPlayerId] = useState(() => localStorage.getItem('neon_tetris_player') || '');
     const [isNewChampion, setIsNewChampion] = useState(false);
@@ -89,14 +70,10 @@ export function TetrisGame() {
     const directoryRef = useRef(playerDirectory);
     directoryRef.current = playerDirectory;
 
-    const champion = computeChampion(records);
+    const champion = computeGameChampion(records);
     const selectedPlayerRecord = records[selectedPlayerId] || null;
 
-    const locale = settings.language === 'en' ? 'en-US' : 'es-CO';
-    const formatRecordDate = (iso) => {
-        const d = new Date(iso);
-        return isNaN(d) ? '' : d.toLocaleDateString(locale, { day: 'numeric', month: 'short', year: 'numeric' });
-    };
+    const fmtDate = (iso) => formatRecordDate(iso, settings.language);
 
     const handlePlayerSelect = (e) => {
         const id = e.target.value;
@@ -234,6 +211,10 @@ export function TetrisGame() {
         let lastTime = 0;
         let particles = [];
         let shake = 0;
+        // Record holder drawn in the side panel (refreshed on start/game over)
+        const initialChampion = computeGameChampion(DataStore.getTetrisRecords());
+        let bestScore = initialChampion ? initialChampion.score : 0;
+        let bestName = initialChampion ? initialChampion.name : '';
         const keys = {};
         const touchState = touchStateRef.current;
         const touchRepeat = { left: 0, right: 0 };
@@ -483,6 +464,14 @@ export function TetrisGame() {
             drawStat('LEVEL', level, y, '#facc15');
             y += cell * 2.7;
             drawStat('LINES', lines, y, '#34d399');
+            // Record holder (always visible while playing)
+            y += cell * 2.7;
+            drawStat('BEST', bestScore, y, '#ff0055');
+            if (bestName) {
+                ctx.font = `700 ${Math.max(9, cell * 0.42)}px monospace`;
+                ctx.fillStyle = '#f1f5f9';
+                ctx.fillText(bestName.toUpperCase().slice(0, 14), panelX, y + valueSize * 1.2 + cell * 0.8);
+            }
         };
 
         const draw = () => {
@@ -605,6 +594,9 @@ export function TetrisGame() {
             fallTimer = 0;
             particles = [];
             shake = 0;
+            const champ = computeGameChampion(DataStore.getTetrisRecords());
+            bestScore = champ ? champ.score : 0;
+            bestName = champ ? champ.name : '';
             spawnPiece();
             syncState('PLAYING');
         }
@@ -626,11 +618,15 @@ export function TetrisGame() {
             const playerId = playerRef.current;
             const name = playerId ? directoryRef.current[playerId] : null;
             if (name) {
-                const prevChampion = computeChampion(DataStore.getTetrisRecords());
+                const prevChampion = computeGameChampion(DataStore.getTetrisRecords());
                 const prevChampionScore = prevChampion ? prevChampion.score : 0;
                 DataStore.saveTetrisRecord(playerId, name, score);
-                setRecords(DataStore.getTetrisRecords());
+                const updated = DataStore.getTetrisRecords();
+                setRecords(updated);
                 setIsNewChampion(score > prevChampionScore && score > 0);
+                const newChampion = computeGameChampion(updated);
+                bestScore = newChampion ? newChampion.score : 0;
+                bestName = newChampion ? newChampion.name : '';
             } else {
                 setIsNewChampion(false);
             }
@@ -760,7 +756,7 @@ export function TetrisGame() {
                     <div style={{ marginBottom: '1rem', fontSize: '0.95rem', textAlign: 'center', maxWidth: '420px' }}>
                         {champion ? (
                             <span style={{ color: '#facc15', fontWeight: 700 }}>
-                                🏆 {t('gameChampion')}: {champion.name} · {champion.score} · {formatRecordDate(champion.date)}
+                                🏆 {t('gameChampion')}: {champion.name} · {champion.score} · {fmtDate(champion.date)}
                             </span>
                         ) : (
                             <span style={{ color: '#94a3b8' }}>{t('gameNoChampionYet')}</span>
@@ -798,7 +794,7 @@ export function TetrisGame() {
                     </div>
                     {selectedPlayerRecord && (
                         <div style={{ marginBottom: '1.25rem', fontSize: '0.8rem', color: '#22d3ee' }}>
-                            {t('gamePersonalBest')}: {selectedPlayerRecord.score} · {formatRecordDate(selectedPlayerRecord.date)}
+                            {t('gamePersonalBest')}: {selectedPlayerRecord.score} · {fmtDate(selectedPlayerRecord.date)}
                         </div>
                     )}
 
@@ -837,12 +833,12 @@ export function TetrisGame() {
                     </div>
                     {selectedPlayerRecord && (
                         <div style={{ fontSize: '1rem', color: '#67e8f9', marginBottom: '0.25rem' }}>
-                            {t('gamePersonalBest')}: {selectedPlayerRecord.score} · {formatRecordDate(selectedPlayerRecord.date)}
+                            {t('gamePersonalBest')}: {selectedPlayerRecord.score} · {fmtDate(selectedPlayerRecord.date)}
                         </div>
                     )}
                     {champion && (
                         <div style={{ fontSize: '1rem', color: '#facc15', marginBottom: '1.5rem' }}>
-                            🏆 {t('gameChampion')}: {champion.name} · {champion.score} · {formatRecordDate(champion.date)}
+                            🏆 {t('gameChampion')}: {champion.name} · {champion.score} · {fmtDate(champion.date)}
                         </div>
                     )}
                     <button className="sg-neon-button" onClick={() => engineRef.current.startGame()}>

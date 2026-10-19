@@ -106,21 +106,26 @@ export const DataStore = {
     return data.students;
   },
 
-  // SpaceGame per-student high scores: { [studentId]: { score, date } }
+  // SpaceGame per-player high scores: { [playerId]: { score, date, name? } }
   getGameRecords: () => {
     const data = DataStore.load();
     return data.gameRecords || {};
   },
 
-  saveGameRecord: (studentId, score) => {
+  // playerId is a student id, '__teacher__' or '__director__<course>'; pass
+  // the display name so new records embed it (legacy records without a name
+  // still resolve through the student roster).
+  saveGameRecord: (playerId, score, name = null) => {
     const data = DataStore.load();
     if (!data.gameRecords) data.gameRecords = {};
-    const prev = data.gameRecords[studentId];
+    const prev = data.gameRecords[playerId];
     if (!prev || score > prev.score) {
-        data.gameRecords[studentId] = { score, date: new Date().toISOString() };
+        const rec = { score, date: new Date().toISOString() };
+        if (name) rec.name = name;
+        data.gameRecords[playerId] = rec;
         DataStore.save(data);
     }
-    return data.gameRecords[studentId];
+    return data.gameRecords[playerId];
   },
 
   // Tetris per-player high scores: { [playerId]: { score, date, name } }
