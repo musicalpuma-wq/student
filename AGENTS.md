@@ -103,7 +103,10 @@ src/
                             6 timbres: sine/triangle/square/sawtooth plus
                             piano and organ via PeriodicWave), the
                             SpaceGame (Neon Galaga canvas shooter) and the
-                            TetrisGame (glow-neon Tetris clone).
+                            TetrisGame (glow-neon Tetris clone). Each game
+                            card shows its cover art (src/assets/games/) and
+                            the current record holder; clicking opens the
+                            game fullscreen.
                             All sound uses the Web Audio API; no audio assets.
   components/
     Layout.jsx              Shell with Sidebar + <Outlet/>; owns the collapsed
@@ -155,6 +158,8 @@ src/
     gradeUtils.js           Grade digit-shorthand formatter ("45" -> "4.5")
                             and ±25% evaluation-range helpers
   assets/mascots/           PNG sprite sheets (dog, bear, fox; 5 expressions each)
+  assets/games/             Game cover art (space-cover.jpg, tetris-cover.jpg)
+                            shown on the Tools game cards
 ```
 
 ### Routing

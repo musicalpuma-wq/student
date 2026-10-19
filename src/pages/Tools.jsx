@@ -7,6 +7,8 @@ import { DataStore } from '../services/DataStore';
 import { computeGameChampion } from '../utils/gameUtils';
 import { SpaceGame } from '../components/SpaceGame';
 import { TetrisGame } from '../components/TetrisGame';
+import spaceCover from '../assets/games/space-cover.jpg';
+import tetrisCover from '../assets/games/tetris-cover.jpg';
 
 // Available tone-generator timbres: native oscillator types + custom PeriodicWaves
 const TIMBRES = [
@@ -593,27 +595,27 @@ export function Tools() {
                     </div>
                 </div>
 
-                {/* Space Game — launcher card; the game itself renders in fullscreen */}
-                <div ref={gameCardRef} className="card sg-game-card" style={{ gridColumn: '1 / -1', display: 'flex', flexDirection: 'column' }}>
+                {/* Space Game — cover card; the game itself renders in fullscreen */}
+                <div ref={gameCardRef} className="card sg-game-card" style={{ display: 'flex', flexDirection: 'column' }}>
                     <div style={cardHeaderStyle}>
                         <h3 style={sectionTitleStyle}><Gamepad2 size={22} color="var(--color-accent)" /> {t('spaceGame')}</h3>
                         <FullscreenButton targetRef={gameCardRef} {...fsButtonProps} />
                     </div>
                     <div
-                        className="sg-launcher"
+                        className="sg-launcher sg-launcher-cover"
                         onClick={() => toggleFullscreen(gameCardRef)}
                         role="button"
                         tabIndex={0}
                         onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') toggleFullscreen(gameCardRef); }}
                         title={t('fullscreen')}
                     >
-                        <Gamepad2 size={56} color="var(--color-accent)" />
-                        <p style={{ color: 'var(--color-text-secondary)', maxWidth: '420px', margin: 0 }}>{t('gameTagline')}</p>
-                        <span className="btn" style={{ pointerEvents: 'none' }}>{t('gameStart')}</span>
+                        <div className="sg-cover-frame">
+                            <img src={spaceCover} alt={t('spaceGame')} className="sg-cover-img" loading="lazy" />
+                            <span className="sg-cover-play"><Play size={48} /></span>
+                        </div>
+                        <p style={{ color: 'var(--color-text-secondary)', margin: 0, fontSize: '0.9rem' }}>{t('gameTagline')}</p>
                         {gameChampions.space ? (
-                            <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--color-warning)' }}>
-                                🏆 {gameChampions.space.name} · {gameChampions.space.score}
-                            </span>
+                            <span className="sg-cover-champion">🏆 {gameChampions.space.name} · {gameChampions.space.score}</span>
                         ) : (
                             <span style={{ fontSize: '0.8rem', color: 'var(--color-text-secondary)' }}>
                                 {t('gameHighScore')}: {parseInt(localStorage.getItem('neon_galaga_highscore') || '0', 10)}
@@ -625,27 +627,27 @@ export function Tools() {
                     </div>
                 </div>
 
-                {/* Tetris Game — launcher card; the game itself renders in fullscreen */}
-                <div ref={tetrisCardRef} className="card sg-game-card" style={{ gridColumn: '1 / -1', display: 'flex', flexDirection: 'column' }}>
+                {/* Tetris Game — cover card; the game itself renders in fullscreen */}
+                <div ref={tetrisCardRef} className="card sg-game-card" style={{ display: 'flex', flexDirection: 'column' }}>
                     <div style={cardHeaderStyle}>
                         <h3 style={sectionTitleStyle}><Blocks size={22} color="var(--color-accent)" /> {t('tetrisGame')}</h3>
                         <FullscreenButton targetRef={tetrisCardRef} {...fsButtonProps} />
                     </div>
                     <div
-                        className="sg-launcher"
+                        className="sg-launcher sg-launcher-cover"
                         onClick={() => toggleFullscreen(tetrisCardRef)}
                         role="button"
                         tabIndex={0}
                         onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') toggleFullscreen(tetrisCardRef); }}
                         title={t('fullscreen')}
                     >
-                        <Blocks size={56} color="var(--color-accent)" />
-                        <p style={{ color: 'var(--color-text-secondary)', maxWidth: '420px', margin: 0 }}>{t('tetrisTagline')}</p>
-                        <span className="btn" style={{ pointerEvents: 'none' }}>{t('gameStart')}</span>
+                        <div className="sg-cover-frame">
+                            <img src={tetrisCover} alt={t('tetrisGame')} className="sg-cover-img" loading="lazy" />
+                            <span className="sg-cover-play"><Play size={48} /></span>
+                        </div>
+                        <p style={{ color: 'var(--color-text-secondary)', margin: 0, fontSize: '0.9rem' }}>{t('tetrisTagline')}</p>
                         {gameChampions.tetris && (
-                            <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--color-warning)' }}>
-                                🏆 {gameChampions.tetris.name} · {gameChampions.tetris.score}
-                            </span>
+                            <span className="sg-cover-champion">🏆 {gameChampions.tetris.name} · {gameChampions.tetris.score}</span>
                         )}
                     </div>
                     <div className="sg-game-area">

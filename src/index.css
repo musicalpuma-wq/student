@@ -618,3 +618,63 @@ th {
   flex: 1;
   min-height: 0;
 }
+
+/* Game cover launcher: poster image with play overlay */
+.sg-launcher-cover {
+  padding: 0;
+  border: none;
+  gap: 0.8rem;
+}
+
+.sg-launcher-cover:hover {
+  background: none;
+  transform: none;
+}
+
+.sg-cover-frame {
+  position: relative;
+  width: 100%;
+  overflow: hidden;
+  border-radius: var(--radius-md);
+  border: 2px solid var(--color-border);
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.sg-launcher-cover:hover .sg-cover-frame {
+  border-color: var(--color-accent);
+  box-shadow: 0 0 24px rgba(0, 113, 227, 0.35);
+}
+
+.sg-cover-img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 3 / 4;
+  object-fit: cover;
+  transition: transform 0.35s ease;
+}
+
+.sg-launcher-cover:hover .sg-cover-img {
+  transform: scale(1.04);
+}
+
+.sg-cover-play {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  background: rgba(0, 0, 0, 0.25);
+  opacity: 0;
+  transition: opacity var(--transition-fast);
+}
+
+.sg-launcher-cover:hover .sg-cover-play {
+  opacity: 1;
+}
+
+.sg-cover-champion {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--color-warning);
+}
