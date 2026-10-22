@@ -48,8 +48,9 @@ function getPerformanceMeta(avg, lang = 'es') {
       emoji: '📭',
       mascotClass: 'mascot-fair',
       color: 'var(--color-text-secondary)',
-      borderColor: 'var(--color-border)',
-      bgGradient: 'linear-gradient(135deg, rgba(134,134,139,0.12), rgba(134,134,139,0.04))',
+      glowColor: 'rgba(134, 134, 139, 0.25)',
+      bgGradient:
+        'radial-gradient(circle at 0% 0%, rgba(0, 113, 227, 0.12) 0%, transparent 55%), linear-gradient(135deg, rgba(134, 134, 139, 0.14) 0%, rgba(134, 134, 139, 0.04) 100%)',
       title: isEs ? '📋 Sin calificaciones registradas en este alcance' : '📋 No grades recorded in this scope yet',
       subtitle: isEs
         ? 'Aún no se han calificado actividades promediables. Revisa la asistencia y el observador a continuación.'
@@ -64,8 +65,9 @@ function getPerformanceMeta(avg, lang = 'es') {
       emoji: '🤩',
       mascotClass: 'mascot-excellent',
       color: '#28a745',
-      borderColor: '#34c759',
-      bgGradient: 'linear-gradient(135deg, rgba(52, 199, 89, 0.2), rgba(48, 176, 199, 0.12))',
+      glowColor: 'rgba(52, 199, 89, 0.35)',
+      bgGradient:
+        'radial-gradient(circle at 8% 20%, rgba(52, 199, 89, 0.28) 0%, transparent 55%), radial-gradient(circle at 92% 80%, rgba(48, 176, 199, 0.24) 0%, transparent 55%), linear-gradient(135deg, rgba(52, 199, 89, 0.18) 0%, rgba(48, 176, 199, 0.12) 55%, rgba(255, 214, 10, 0.1) 100%)',
       title: isEs
         ? '🏆 ¡Felicitaciones por un Rendimiento Académico Superior!'
         : '🏆 Congratulations on Superior Academic Performance!',
@@ -82,8 +84,9 @@ function getPerformanceMeta(avg, lang = 'es') {
       emoji: '😁',
       mascotClass: 'mascot-good',
       color: '#30d158',
-      borderColor: '#30d158',
-      bgGradient: 'linear-gradient(135deg, rgba(48, 209, 88, 0.16), rgba(52, 199, 89, 0.06))',
+      glowColor: 'rgba(48, 209, 88, 0.32)',
+      bgGradient:
+        'radial-gradient(circle at 10% 25%, rgba(48, 209, 88, 0.26) 0%, transparent 55%), radial-gradient(circle at 90% 75%, rgba(0, 113, 227, 0.15) 0%, transparent 55%), linear-gradient(135deg, rgba(48, 209, 88, 0.16) 0%, rgba(52, 199, 89, 0.08) 100%)',
       title: isEs
         ? '🎉 ¡Felicitaciones por tu Buen Rendimiento Académico!'
         : '🎉 Congratulations on Your High Academic Performance!',
@@ -101,8 +104,9 @@ function getPerformanceMeta(avg, lang = 'es') {
       emoji: nearRisk ? '😐' : '🙂',
       mascotClass: 'mascot-fair',
       color: '#ff9f0a',
-      borderColor: '#ff9f0a',
-      bgGradient: 'linear-gradient(135deg, rgba(255, 159, 10, 0.18), rgba(255, 159, 10, 0.05))',
+      glowColor: 'rgba(255, 159, 10, 0.32)',
+      bgGradient:
+        'radial-gradient(circle at 10% 20%, rgba(255, 159, 10, 0.26) 0%, transparent 55%), radial-gradient(circle at 90% 80%, rgba(255, 214, 10, 0.18) 0%, transparent 55%), linear-gradient(135deg, rgba(255, 159, 10, 0.16) 0%, rgba(255, 204, 0, 0.07) 100%)',
       title: nearRisk
         ? (isEs ? '⚠️ Atención Preventiva: Promedio Básico Cercano al Límite' : '⚠️ Preventive Alert: Basic Average Near Minimum Threshold')
         : (isEs ? '💪 Desempeño Básico — En Aprobación con Potencial de Mejora' : '💪 Basic Performance — Passing with Room to Grow'),
@@ -122,8 +126,9 @@ function getPerformanceMeta(avg, lang = 'es') {
     emoji: avg < 2.0 ? '😡' : '😢',
     mascotClass: avg < 2.0 ? 'mascot-fail' : 'mascot-poor',
     color: '#ff3b30',
-    borderColor: '#ff3b30',
-    bgGradient: 'linear-gradient(135deg, rgba(255, 59, 48, 0.22), rgba(255, 159, 10, 0.08))',
+    glowColor: 'rgba(255, 59, 48, 0.36)',
+    bgGradient:
+      'radial-gradient(circle at 10% 25%, rgba(255, 59, 48, 0.28) 0%, transparent 55%), radial-gradient(circle at 90% 80%, rgba(255, 159, 10, 0.2) 0%, transparent 55%), linear-gradient(135deg, rgba(255, 59, 48, 0.2) 0%, rgba(255, 149, 0, 0.09) 100%)',
     title: isEs
       ? '🚨 ALERTA DE BAJO RENDIMIENTO ACADÉMICO'
       : '🚨 LOW ACADEMIC PERFORMANCE ALERT',
@@ -764,11 +769,10 @@ export function StudentSummaryModal({
           style={{
             display: 'flex',
             justifyContent: 'space-between',
-            alignItems: 'flex-start',
+            alignItems: 'center',
             gap: '1rem',
             flexWrap: 'wrap',
-            borderBottom: '1px solid var(--color-border)',
-            paddingBottom: '1rem'
+            paddingBottom: '0.2rem'
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.9rem' }}>
@@ -921,7 +925,7 @@ export function StudentSummaryModal({
           </div>
         </header>
 
-        {/* Hero Status Banner (Alert or Congratulations) */}
+        {/* Hero Status Banner (Alert or Congratulations) — Borderless Gradient Stage */}
         <section
           ref={bannerRef}
           className={`ssm-banner ${
@@ -932,7 +936,7 @@ export function StudentSummaryModal({
               : ''
           }`}
           style={{
-            '--ssm-banner-border': perfMeta.borderColor,
+            '--ssm-glow-color': perfMeta.glowColor,
             '--ssm-banner-bg': perfMeta.bgGradient
           }}
         >
@@ -940,23 +944,24 @@ export function StudentSummaryModal({
             {perfMeta.emoji}
           </div>
 
-          <div style={{ flex: 1, minWidth: '220px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '0.25rem' }}>
+          <div style={{ flex: 1, minWidth: '240px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap', marginBottom: '0.45rem' }}>
               <span
                 style={{
-                  fontSize: '0.75rem',
+                  fontSize: '0.76rem',
                   fontWeight: 800,
                   textTransform: 'uppercase',
-                  padding: '2px 10px',
+                  padding: '3px 12px',
                   borderRadius: '999px',
                   background: perfMeta.color,
                   color: '#fff',
-                  letterSpacing: '0.4px'
+                  letterSpacing: '0.5px',
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.12)'
                 }}
               >
                 {perfMeta.badge}
               </span>
-              <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--color-text-secondary)' }}>
+              <span style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--color-text-secondary)' }}>
                 {scopeMode === 'all'
                   ? isEs
                     ? 'Consolidado Períodos 1 al 4'
@@ -965,46 +970,44 @@ export function StudentSummaryModal({
               </span>
             </div>
 
-            <h2 style={{ fontSize: '1.2rem', margin: '0 0 0.25rem', color: 'var(--color-text-primary)' }}>
+            <h2 style={{ fontSize: '1.3rem', margin: '0 0 0.35rem', color: 'var(--color-text-primary)', lineHeight: 1.25 }}>
               {perfMeta.title}
             </h2>
-            <p style={{ fontSize: '0.9rem', color: 'var(--color-text-secondary)', margin: 0 }}>
+            <p style={{ fontSize: '0.94rem', color: 'var(--color-text-secondary)', margin: 0, lineHeight: 1.55 }}>
               {perfMeta.subtitle}
             </p>
 
             {/* Quick Diagnostic Chips */}
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.45rem', marginTop: '0.75rem' }}>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginTop: '0.95rem' }}>
               {diagnosticChips.map((chip, idx) => {
                 const bgMap = {
-                  success: 'rgba(52, 199, 89, 0.15)',
-                  warning: 'rgba(255, 159, 10, 0.16)',
-                  danger: 'rgba(255, 59, 48, 0.16)'
+                  success: 'rgba(255, 255, 255, 0.72)',
+                  warning: 'rgba(255, 255, 255, 0.72)',
+                  danger: 'rgba(255, 255, 255, 0.78)'
+                };
+                const darkBgMap = {
+                  success: 'rgba(52, 199, 89, 0.18)',
+                  warning: 'rgba(255, 159, 10, 0.18)',
+                  danger: 'rgba(255, 59, 48, 0.2)'
                 };
                 const colorMap = {
-                  success: '#248a3d',
-                  warning: '#c93400',
-                  danger: '#d70015'
+                  success: '#1e7e34',
+                  warning: '#b85000',
+                  danger: '#c91c22'
                 };
+                const isLight = document.documentElement.getAttribute('data-theme') === 'light';
                 return (
                   <span
                     key={idx}
                     style={{
                       fontSize: '0.78rem',
                       fontWeight: 600,
-                      padding: '0.25rem 0.65rem',
+                      padding: '0.3rem 0.75rem',
                       borderRadius: '999px',
-                      background: bgMap[chip.type] || 'var(--color-bg-card)',
-                      color:
-                        document.documentElement.getAttribute('data-theme') === 'light'
-                          ? colorMap[chip.type]
-                          : 'var(--color-text-primary)',
-                      border: `1px solid ${
-                        chip.type === 'danger'
-                          ? 'rgba(255,59,48,0.4)'
-                          : chip.type === 'warning'
-                          ? 'rgba(255,159,10,0.4)'
-                          : 'rgba(52,199,89,0.4)'
-                      }`
+                      background: isLight ? bgMap[chip.type] : darkBgMap[chip.type],
+                      backdropFilter: 'blur(6px)',
+                      color: isLight ? colorMap[chip.type] : 'var(--color-text-primary)',
+                      boxShadow: '0 2px 6px rgba(0, 0, 0, 0.05)'
                     }}
                   >
                     {chip.text}
@@ -1020,17 +1023,17 @@ export function StudentSummaryModal({
               className="btn"
               onClick={() => triggerVisualEffect(perfMeta.level)}
               style={{
-                background: 'linear-gradient(135deg, #34c759, #30b0c7)',
+                background: 'linear-gradient(135deg, #34c759, #24b47e, #30b0c7)',
                 color: '#fff',
                 fontWeight: 700,
-                padding: '0.55rem 1rem',
+                padding: '0.68rem 1.2rem',
                 borderRadius: '999px',
-                gap: '6px',
+                gap: '7px',
                 flexShrink: 0,
-                boxShadow: '0 4px 12px rgba(52, 199, 89, 0.35)'
+                boxShadow: '0 6px 18px rgba(52, 199, 89, 0.38)'
               }}
             >
-              <Sparkles size={16} aria-hidden="true" />
+              <Sparkles size={17} aria-hidden="true" />
               🎉 {t('studentReportCelebrate')}
             </button>
           )}
@@ -1368,10 +1371,14 @@ export function StudentSummaryModal({
                 ? isEs
                   ? '🏅 ¡Felicitaciones! Asistencia y puntualidad impecables.'
                   : '🏅 Congratulations! Flawless attendance and punctuality.'
-                : reportData.totalAbsent >= 3
+                : reportData.totalAbsent >= 3 || (reportData.overallAttRate !== null && reportData.overallAttRate < 65)
                 ? isEs
-                  ? '🚨 Atención: Las inasistencias reiteradas afectan el aprendizaje.'
-                  : '🚨 Warning: Repeated absences impact learning progress.'
+                  ? '🚨 Atención: Las inasistencias o retardos frecuentes afectan el proceso.'
+                  : '🚨 Warning: Frequent absences or tardiness impact learning.'
+                : reportData.totalAbsent >= 1 || reportData.totalLate >= 2
+                ? isEs
+                  ? '⚠️ Se registran inasistencias o llegadas tarde por revisar.'
+                  : '⚠️ Some absences or late arrivals recorded.'
                 : isEs
                 ? '👍 Asistencia dentro del rango esperado.'
                 : '👍 Attendance within expected range.'}
