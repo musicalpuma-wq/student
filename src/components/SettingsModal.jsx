@@ -152,6 +152,29 @@ export function SettingsModal({ onClose }) {
                                 </label>
                             </div>
                         </div>
+                        <div>
+                            <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 500 }}>{t('studentReportSettingLabel')}</label>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', background: 'var(--color-bg-secondary)', padding: '0.9rem 1rem', borderRadius: '8px' }}>
+                                <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontWeight: 500 }}>
+                                    <input 
+                                        type="radio" 
+                                        name="studentReportMode" 
+                                        checked={(settings.studentReportMode || 'single') === 'single'} 
+                                        onChange={() => updateSettings({ studentReportMode: 'single' })}
+                                    />
+                                    📅 {t('studentReportSinglePeriod')}
+                                </label>
+                                <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontWeight: 500 }}>
+                                    <input 
+                                        type="radio" 
+                                        name="studentReportMode" 
+                                        checked={settings.studentReportMode === 'all'} 
+                                        onChange={() => updateSettings({ studentReportMode: 'all' })}
+                                    />
+                                    📊 {t('studentReportAllPeriods')}
+                                </label>
+                            </div>
+                        </div>
                     </div>
                 )}
                 

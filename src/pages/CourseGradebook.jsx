@@ -4,6 +4,7 @@ import { DataStore } from '../services/DataStore';
 import { Plus, Calendar, FileText, UserSquare2, ChevronLeft, Save, ArrowUpDown, Mail, GripVertical, Edit2, ArrowRight, Trash2, AlertTriangle, KeyRound, Lock, Unlock, Copy, ClipboardPaste, RefreshCw, Dices } from 'lucide-react';
 import { GenericModal } from '../components/GenericModal';
 import { RandomPickerModal } from '../components/RandomPickerModal';
+import { StudentSummaryModal } from '../components/StudentSummaryModal';
 import { useSettings } from '../context/SettingsContext';
 import { formatGradeInput, evaluationBounds, isWithinEvaluationBounds, formatBound, maxEvaluationGrade } from '../utils/gradeUtils';
 
@@ -24,6 +25,7 @@ export function CourseGradebook() {
   const [newAttendanceDate, setNewAttendanceDate] = useState(new Date().toISOString().split('T')[0]);
   const [sortConfig, setSortConfig] = useState({ key: 'name', direction: 'asc' });
   const [viewingStudent, setViewingStudent] = useState(null); // Student object to view details
+  const [summaryStudent, setSummaryStudent] = useState(null); // Student object for graphical summary report modal
   const [isEditingStudent, setIsEditingStudent] = useState(false); // Toggle edit mode in modal
   const [isEditingCourseName, setIsEditingCourseName] = useState(false);
   const [newCourseName, setNewCourseName] = useState('');
@@ -1367,7 +1369,16 @@ export function CourseGradebook() {
                                 color: isFocused ? 'var(--color-accent)' : 'inherit',
                                 transition: 'color 0.2s',
                                 padding: '4px'
-                            }}>{student.name}</td>
+                            }}>
+                                <button
+                                    type="button"
+                                    className="student-name-btn"
+                                    onClick={() => setSummaryStudent(student)}
+                                >
+                                    <span>{student.name}</span>
+                                    <span className="student-name-badge" aria-hidden="true">📊</span>
+                                </button>
+                            </td>
                             {activities.map(act => {
                                 const grade = (student.grades?.[currentPeriod] || {})[act.id];
                                 const numGrade = parseFloat(grade);
@@ -1592,7 +1603,16 @@ export function CourseGradebook() {
                                            placeholder="-"
                                        />
                                    </td>
-                                   <td style={{ fontWeight: 500 }}>{student.name}</td>
+                                   <td style={{ fontWeight: 500 }}>
+                                       <button
+                                           type="button"
+                                           className="student-name-btn"
+                                           onClick={() => setSummaryStudent(student)}
+                                       >
+                                           <span>{student.name}</span>
+                                           <span className="student-name-badge" aria-hidden="true">📊</span>
+                                       </button>
+                                   </td>
                                    {dates.map(date => {
                                        const status = student.attendance?.[currentPeriod]?.[date]; // No default 'present', allow undefined
 
@@ -1698,7 +1718,16 @@ export function CourseGradebook() {
                                     placeholder="-"
                                 />
                             </td>
-                            <td style={{ fontWeight: 500 }}>{student.name}</td>
+                            <td style={{ fontWeight: 500 }}>
+                                <button
+                                    type="button"
+                                    className="student-name-btn"
+                                    onClick={() => setSummaryStudent(student)}
+                                >
+                                    <span>{student.name}</span>
+                                    <span className="student-name-badge" aria-hidden="true">📊</span>
+                                </button>
+                            </td>
                             {materials.map(mat => (
                                 <td key={mat.id} style={{ padding: '0.5rem' }}>
                                     <input 
@@ -1739,7 +1768,14 @@ export function CourseGradebook() {
                         <tr key={student.id}>
                             <td style={{ fontWeight: 500, verticalAlign: 'top' }}>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                    {student.name}
+                                    <button
+                                        type="button"
+                                        className="student-name-btn"
+                                        onClick={() => setSummaryStudent(student)}
+                                    >
+                                        <span>{student.name}</span>
+                                        <span className="student-name-badge" aria-hidden="true">📊</span>
+                                    </button>
                                     <button 
                                         onClick={() => setViewingStudent(student)}
                                         className="btn btn-secondary"
@@ -2478,6 +2514,30 @@ export function CourseGradebook() {
               pickedIds={pickedIds}
               onPickedIdsChange={setPickedIds}
               onClose={() => setShowPicker(false)}
+          />
+      )}
+
+      {/* Graphical Student Summary Report Modal */}
+      {summaryStudent && (
+          <StudentSummaryModal
+              student={students.find(s => s.id === summaryStudent.id) || summaryStudent}
+              courseId={courseId}
+              allCourseStudents={students}
+              lateTimes={lateTimes}
+              onClose={() => setSummaryStudent(null)}
+              onOpenProfile={(s) => {
+                  setSummaryStudent(null);
+                  setViewingStudent(s);
+              }}
+              onAddObservation={(s) => {
+                  setNewObservation({
+                      studentId: s.id,
+                      studentName: s.name,
+                      date: new Date().toISOString().split('T')[0],
+                      note: ''
+                  });
+              }}
+              onSendObservationEmail={(s, note) => handleSendToParent(s, note)}
           />
       )}
 

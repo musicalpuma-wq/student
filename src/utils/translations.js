@@ -282,6 +282,25 @@ export const translations = {
 
     // Settings
     saveAndExit: "Guardar y Salir",
+    studentReportSettingLabel: "Informe del Estudiante (al hacer clic en el nombre)",
+    studentReportSinglePeriod: "Un solo período (período activo)",
+    studentReportAllPeriods: "Todos los períodos (1 al 4)",
+    
+    // Student Summary Report Modal
+    studentReportTitle: "Informe Integral del Estudiante",
+    studentReportSingle: "Un Período",
+    studentReportAll: "Todos los Períodos",
+    studentReportViewProfile: "Ficha y Contacto",
+    studentReportCelebrate: "¡Celebrar!",
+    studentReportClose: "Cerrar",
+    studentReportAcademic: "Rendimiento Académico",
+    studentReportAttendance: "Asistencia y Puntualidad",
+    studentReportConvivencia: "Observador y Convivencia",
+    studentReportEvolution: "Evolución por Períodos",
+    studentReportActivitiesDetail: "Detalle Gráfico de Actividades",
+    studentReportAttendanceDetail: "Registro Visual de Asistencia",
+    studentReportObservationsDetail: "Bitácora de Observaciones y Seguimiento",
+    studentReportMaterials: "Materiales de Clase",
     
     // Drive
     driveUploadInstruction: "Copia descargada. Arrástrela a la carpeta de Drive.",
@@ -570,6 +589,25 @@ export const translations = {
 
     // Settings
     saveAndExit: "Save & Exit",
+    studentReportSettingLabel: "Student Report (when clicking student name)",
+    studentReportSinglePeriod: "Single period (active period)",
+    studentReportAllPeriods: "All periods (1 to 4)",
+
+    // Student Summary Report Modal
+    studentReportTitle: "Comprehensive Student Report",
+    studentReportSingle: "Single Period",
+    studentReportAll: "All Periods",
+    studentReportViewProfile: "Profile & Contact",
+    studentReportCelebrate: "Celebrate!",
+    studentReportClose: "Close",
+    studentReportAcademic: "Academic Performance",
+    studentReportAttendance: "Attendance & Punctuality",
+    studentReportConvivencia: "Observer & Behavior",
+    studentReportEvolution: "Evolution by Period",
+    studentReportActivitiesDetail: "Graphical Activity Breakdown",
+    studentReportAttendanceDetail: "Visual Attendance Log",
+    studentReportObservationsDetail: "Observations & Follow-up Log",
+    studentReportMaterials: "Class Materials",
 
     // Drive
     driveUploadInstruction: "Backup downloaded. Drag it to the Drive folder.",

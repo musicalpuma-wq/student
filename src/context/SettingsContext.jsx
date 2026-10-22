@@ -12,6 +12,7 @@ export function SettingsProvider({ children }) {
     themeMode: 'auto', // 'light' | 'dark' | 'auto'
     fontSize: 'medium', // 'small' | 'medium' | 'large'
     currentPeriod: '1', // '1', '2', '3', '4'
+    studentReportMode: 'single', // 'single' | 'all'
     // Courses hidden from the Dashboard (cards, quick access, chart), per period.
     // Courses not listed here are visible; new courses are visible by default.
     dashboardHidden: {}, // { [period]: [courseName] }

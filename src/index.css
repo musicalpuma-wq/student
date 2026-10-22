@@ -678,3 +678,273 @@ th {
   font-weight: 600;
   color: var(--color-warning);
 }
+
+/* ============================================
+   Student Name Clickable Button in Gradebook Lists
+   ============================================ */
+.student-name-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  background: transparent;
+  border: none;
+  padding: 0.3rem 0.55rem;
+  margin: -0.2rem -0.4rem;
+  border-radius: var(--radius-sm);
+  color: inherit;
+  font: inherit;
+  font-weight: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color var(--transition-fast), color var(--transition-fast), transform var(--transition-fast);
+}
+
+.student-name-btn:hover,
+.student-name-btn:focus-visible {
+  background-color: rgba(0, 113, 227, 0.1);
+  color: var(--color-accent);
+  transform: translateX(2px);
+  outline: none;
+}
+
+.student-name-btn .student-name-badge {
+  opacity: 0;
+  font-size: 0.8rem;
+  transition: opacity var(--transition-fast), transform var(--transition-fast);
+  transform: scale(0.85);
+}
+
+.student-name-btn:hover .student-name-badge,
+.student-name-btn:focus-visible .student-name-badge {
+  opacity: 1;
+  transform: scale(1);
+}
+
+:root[data-theme='cyberpunk'] .student-name-btn:hover,
+:root[data-theme='cyberpunk'] .student-name-btn:focus-visible {
+  background-color: rgba(0, 240, 255, 0.14);
+  text-shadow: 0 0 10px rgba(0, 240, 255, 0.65);
+}
+
+/* ============================================
+   Student Summary Report Modal (<dialog>)
+   ============================================ */
+dialog.student-summary-dialog {
+  margin: auto;
+  width: min(980px, 94vw);
+  max-height: 90vh;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-bg-card);
+  color: var(--color-text-primary);
+  box-shadow: 0 24px 48px rgba(0, 0, 0, 0.28);
+  padding: 0;
+  overflow: hidden;
+
+  opacity: 0;
+  transform: scale(0.92) translateY(12px);
+  transition-property: opacity, transform, display, overlay;
+  transition-duration: 0.28s;
+  transition-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+  transition-behavior: allow-discrete;
+}
+
+dialog.student-summary-dialog::backdrop {
+  background-color: rgba(0, 0, 0, 0);
+  backdrop-filter: blur(0px);
+  transition-property: background-color, backdrop-filter, display, overlay;
+  transition-duration: 0.28s;
+  transition-timing-function: ease-out;
+  transition-behavior: allow-discrete;
+}
+
+:is(dialog.student-summary-dialog[open]):where(:not([data-closing])) {
+  display: flex;
+  flex-direction: column;
+  opacity: 1;
+  transform: scale(1) translateY(0);
+
+  @starting-style {
+    opacity: 0;
+    transform: scale(0.92) translateY(12px);
+  }
+
+  &::backdrop {
+    background-color: rgba(0, 0, 0, 0.58);
+    backdrop-filter: blur(6px);
+
+    @starting-style {
+      background-color: rgba(0, 0, 0, 0);
+      backdrop-filter: blur(0px);
+    }
+  }
+}
+
+:root[data-theme='cyberpunk'] dialog.student-summary-dialog {
+  border: 1px solid var(--color-accent);
+  box-shadow: 0 0 32px rgba(0, 240, 255, 0.35), 0 24px 48px rgba(0, 0, 0, 0.75);
+}
+
+.student-summary-scroll {
+  overflow-y: auto;
+  padding: 1.75rem 2rem 2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.4rem;
+  position: relative;
+}
+
+.student-summary-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 20;
+}
+
+/* Status Banner Variants */
+.ssm-banner {
+  position: relative;
+  border-radius: var(--radius-md);
+  padding: 1.25rem 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 1.2rem;
+  overflow: hidden;
+  border: 2px solid var(--ssm-banner-border, var(--color-border));
+  background: var(--ssm-banner-bg, var(--color-bg-body));
+  transition: border-color 0.3s ease, background 0.3s ease;
+}
+
+.ssm-banner-alert-pulse {
+  animation: ssmAlertGlow 2s infinite ease-in-out;
+}
+
+@keyframes ssmAlertGlow {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(255, 59, 48, 0.25), 0 4px 16px rgba(255, 59, 48, 0.15);
+  }
+  50% {
+    box-shadow: 0 0 0 6px rgba(255, 59, 48, 0.12), 0 6px 24px rgba(255, 59, 48, 0.32);
+  }
+}
+
+.ssm-banner-celebrate-glow {
+  box-shadow: 0 8px 26px rgba(52, 199, 89, 0.2);
+}
+
+.ssm-mascot-bubble {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2.5rem;
+  background: var(--color-bg-card);
+  box-shadow: var(--shadow-md);
+  flex-shrink: 0;
+  border: 3px solid var(--ssm-banner-border, var(--color-accent));
+  user-select: none;
+}
+
+/* Custom-property-driven progress & activity bars */
+.ssm-progress-track {
+  width: 100%;
+  height: 12px;
+  background: rgba(134, 134, 139, 0.18);
+  border-radius: 999px;
+  position: relative;
+  overflow: hidden;
+}
+
+.ssm-progress-fill {
+  height: 100%;
+  width: var(--bar-pct, 0%);
+  background: var(--bar-color, var(--color-accent));
+  border-radius: 999px;
+  transition: width 0.65s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.ssm-pass-marker {
+  position: absolute;
+  top: -2px;
+  bottom: -2px;
+  left: 60%; /* 3.0 out of 5.0 = 60% */
+  width: 2px;
+  background: var(--color-text-primary);
+  opacity: 0.45;
+  z-index: 2;
+}
+
+/* Period Evolution Vertical Bar */
+.ssm-period-bar-col {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  height: 150px;
+  position: relative;
+}
+
+.ssm-period-bar-fill {
+  width: 44px;
+  height: var(--period-bar-h, 6%);
+  background: var(--period-bar-color, var(--color-accent));
+  border-radius: 8px 8px 4px 4px;
+  transition: height 0.65s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  box-shadow: inset 0 2px 4px rgba(255, 255, 255, 0.3);
+  min-height: 6px;
+}
+
+/* KPI Grid */
+.ssm-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(265px, 1fr));
+  gap: 1.1rem;
+}
+
+.ssm-subcard {
+  background: var(--color-bg-body);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 1.2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+:root[data-theme='dark'] .ssm-subcard {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+:root[data-theme='cyberpunk'] .ssm-subcard {
+  background: rgba(11, 2, 24, 0.65);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  dialog.student-summary-dialog,
+  :is(dialog.student-summary-dialog[open]):where(:not([data-closing])) {
+    transform: none;
+    transition-duration: 0.1s;
+
+    @starting-style {
+      transform: none;
+    }
+  }
+
+  .ssm-banner-alert-pulse,
+  .mascot-excellent,
+  .mascot-good,
+  .mascot-fair,
+  .mascot-poor,
+  .mascot-fail {
+    animation: none;
+  }
+
+  .ssm-progress-fill,
+  .ssm-period-bar-fill {
+    transition-duration: 0.1s;
+  }
+}
