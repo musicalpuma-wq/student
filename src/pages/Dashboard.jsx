@@ -352,7 +352,7 @@ export function Dashboard() {
                           emojiFace = '😢'; 
                           mascotClass = 'mascot-poor';
                       } else {
-                          emojiFace = '😡'; 
+                          emojiFace = '😳'; 
                           mascotClass = 'mascot-fail';
                       }
 

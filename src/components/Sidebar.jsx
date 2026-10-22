@@ -5,6 +5,7 @@ import { SettingsModal } from './SettingsModal';
 import { useSettings } from '../context/SettingsContext';
 import { useGlobalModal } from '../context/GlobalModalContext';
 import { useRef } from 'react';
+import { getBogotaDateString, getBogotaHHMM } from '../utils/dateUtils';
 
 export function Sidebar({ collapsed = false, onToggle }) {
   const { settings, t, updateSettings } = useSettings();
@@ -27,8 +28,8 @@ export function Sidebar({ collapsed = false, onToggle }) {
       const a = document.createElement('a');
       a.href = url;
       const now = new Date();
-      const dateStr = now.toISOString().split('T')[0];
-      const timeStr = now.toTimeString().split(' ')[0].replace(/:/g, '').substring(0, 4); // HHmm
+      const dateStr = getBogotaDateString(now);
+      const timeStr = getBogotaHHMM(now); // HHmm in America/Bogota
       a.download = `backup-${dateStr}-${timeStr}.json`;
       a.click();
       showAlert(t('backupRestore'), "Copia de seguridad descargada exitosamente.");

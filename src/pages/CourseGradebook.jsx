@@ -7,6 +7,7 @@ import { RandomPickerModal } from '../components/RandomPickerModal';
 import { StudentSummaryModal } from '../components/StudentSummaryModal';
 import { useSettings } from '../context/SettingsContext';
 import { formatGradeInput, evaluationBounds, isWithinEvaluationBounds, formatBound, maxEvaluationGrade } from '../utils/gradeUtils';
+import { getBogotaDateString, getBogotaTimeString } from '../utils/dateUtils';
 
 export function CourseGradebook() {
   const { courseId } = useParams();
@@ -17,12 +18,12 @@ export function CourseGradebook() {
   const [activities, setActivities] = useState([]);
   const [materials, setMaterials] = useState([]); // [{id, name}]
   const [activeTab, setActiveTab] = useState('grades'); // grades, attendance, observer, materials
-  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
+  const [selectedDate, setSelectedDate] = useState(() => getBogotaDateString());
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [editingMaterial, setEditingMaterial] = useState(null); // { id, name }
   const [newObservation, setNewObservation] = useState(null); // { studentId, studentName, date: '', note: '' }
   const [showAddDateModal, setShowAddDateModal] = useState(false);
-  const [newAttendanceDate, setNewAttendanceDate] = useState(new Date().toISOString().split('T')[0]);
+  const [newAttendanceDate, setNewAttendanceDate] = useState(() => getBogotaDateString());
   const [sortConfig, setSortConfig] = useState({ key: 'name', direction: 'asc' });
   const [viewingStudent, setViewingStudent] = useState(null); // Student object to view details
   const [summaryStudent, setSummaryStudent] = useState(null); // Student object for graphical summary report modal
@@ -93,7 +94,7 @@ export function CourseGradebook() {
     let hasChanges = false;
     const pendingEmailNote = "Pendiente de correo electrónico de acudiente";
     const pendingPhoneNote = "No ha proporcionado número telefónico del acudiente";
-    const today = new Date().toISOString().split('T')[0];
+    const today = getBogotaDateString();
 
     const updatedStudents = loadedStudents.map(s => {
         let annotations = [...(s.annotations?.[currentPeriod] || [])];
@@ -289,7 +290,7 @@ export function CourseGradebook() {
       if (newObservation && newObservation.note) {
           const student = students.find(s => s.id === newObservation.studentId);
           if (student) {
-             const dateStr = newObservation.date || new Date().toISOString().split('T')[0];
+             const dateStr = newObservation.date || getBogotaDateString();
              const newAnnotation = `[${dateStr}] ${newObservation.note}`;
              
              let updatedAnnotations = [...(student.annotations?.[currentPeriod] || [])];
@@ -690,8 +691,7 @@ export function CourseGradebook() {
     // Cache time when marking as late
     const lateKey = `${student.id}_${date}`;
     if (nextStatus === 'late') {
-        const now = new Date();
-        const timeStr = now.toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit', hour12: true });
+        const timeStr = getBogotaTimeString();
         setLateTimes(prev => {
             const updated = { ...prev, [lateKey]: timeStr };
             localStorage.setItem('sms_late_times', JSON.stringify(updated));
@@ -1482,7 +1482,10 @@ export function CourseGradebook() {
             <div style={{ paddingBottom: '1rem' }}>
                 <div style={{ marginBottom: '1rem', display: 'flex', justifyContent: 'flex-end' }}>
                      <button 
-                         onClick={() => setShowAddDateModal(true)} 
+                         onClick={() => {
+                             setNewAttendanceDate(getBogotaDateString());
+                             setShowAddDateModal(true);
+                         }} 
                          className="btn btn-secondary"
                      >
                          <Plus size={16} style={{ marginRight: '6px' }} />
@@ -1857,7 +1860,7 @@ export function CourseGradebook() {
                                     onClick={() => setNewObservation({ 
                                         studentId: student.id, 
                                         studentName: student.name, 
-                                        date: new Date().toISOString().split('T')[0], 
+                                        date: getBogotaDateString(), 
                                         note: '' 
                                     })} 
                                     className="btn btn-secondary"
@@ -2533,7 +2536,7 @@ export function CourseGradebook() {
                   setNewObservation({
                       studentId: s.id,
                       studentName: s.name,
-                      date: new Date().toISOString().split('T')[0],
+                      date: getBogotaDateString(),
                       note: ''
                   });
               }}

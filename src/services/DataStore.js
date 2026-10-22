@@ -1,3 +1,5 @@
+import { getBogotaDateString, getBogotaYear } from '../utils/dateUtils';
+
 const STORAGE_KEY = 'sms_data_v1';
 
 // Numeric-aware ordering so "902-JM" comes before "1001-JM"
@@ -157,14 +159,14 @@ export const DataStore = {
       
       // Age / DOB Logic & Migration
       if (!s.birthDate) {
+          const currentYear = getBogotaYear();
           if (s.age) {
               // Migration: Set to Jan 1st of the birth year
-              const currentYear = new Date().getFullYear();
               const birthYear = currentYear - parseInt(s.age);
               s.birthDate = `${birthYear}-01-01`;
           } else {
               // Default if neither exists (e.g. new empty)
-              s.birthDate = `${new Date().getFullYear() - 10}-01-01`; // Default ~10yo
+              s.birthDate = `${currentYear - 10}-01-01`; // Default ~10yo
           }
       }
       // Recalculate age from birthDate to ensure consistency
@@ -374,7 +376,7 @@ export const DataStore = {
     if (!data.activities[key]) {
       data.activities[key] = [];
     }
-    const today = new Date().toISOString().split('T')[0];
+    const today = getBogotaDateString();
     const newActivity = { id: crypto.randomUUID(), name: activityName, date: today, locked: false };
     data.activities[key].push(newActivity);
     DataStore.save(data);

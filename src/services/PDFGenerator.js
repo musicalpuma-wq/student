@@ -1,6 +1,7 @@
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { DataStore } from './DataStore';
+import { formatBogotaDate } from '../utils/dateUtils';
 
 export const PDFGenerator = {
   // Generate Student List (Registration Data)
@@ -16,7 +17,7 @@ export const PDFGenerator = {
       doc.setFontSize(18);
       doc.text(`Student List - ${courseId}`, 14, 20);
       doc.setFontSize(10);
-      doc.text(`Generated: ${new Date().toLocaleDateString()}`, 14, 28);
+      doc.text(`Generated: ${formatBogotaDate()}`, 14, 28);
 
       const students = DataStore.getStudentsByCourse(courseId)
         .sort((a, b) => a.name.localeCompare(b.name));
@@ -97,7 +98,7 @@ export const PDFGenerator = {
         doc.setFontSize(11);
         doc.text(`Period ${period}`, 14, 27);
         doc.setFontSize(10);
-        doc.text(`Generated: ${new Date().toLocaleDateString()}`, 14, 33);
+        doc.text(`Generated: ${formatBogotaDate()}`, 14, 33);
 
         const students = DataStore.getStudentsByCourse(courseId)
           .sort((a, b) => a.name.localeCompare(b.name));
@@ -189,7 +190,7 @@ export const PDFGenerator = {
         doc.setFontSize(11);
         doc.text(`Period ${period}`, 14, 27);
         doc.setFontSize(10);
-        doc.text(`Generated: ${new Date().toLocaleDateString()}`, 14, 33);
+        doc.text(`Generated: ${formatBogotaDate()}`, 14, 33);
 
         // Format date headers (MM/DD)
         const shortDates = dates.map(d => {
@@ -346,7 +347,7 @@ export const PDFGenerator = {
             doc.setFontSize(9);
             doc.setFont('helvetica', 'normal');
             doc.setTextColor(120, 120, 120);
-            doc.text(`${cId}  |  Generated: ${new Date().toLocaleDateString()}`, x, y);
+            doc.text(`${cId}  |  Generated: ${formatBogotaDate()}`, x, y);
             doc.setTextColor(0, 0, 0);
             y += 3;
             // Divider

@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect } from 'react';
 import { translations } from '../utils/translations';
+import { getBogotaHour } from '../utils/dateUtils';
 
 const SettingsContext = createContext();
 
@@ -34,8 +35,8 @@ export function SettingsProvider({ children }) {
   useEffect(() => {
     const checkAutoTheme = () => {
       if (settings.themeMode === 'auto') {
-        const hour = new Date().getHours();
-        // Night: 18:00 (6pm) - 6:00 (6am)
+        const hour = getBogotaHour();
+        // Night: 18:00 (6pm) - 6:00 (6am) in Bogotá time
         const isNight = hour >= 18 || hour < 6;
         setCurrentTheme(isNight ? 'dark' : 'light');
       } else if (settings.themeMode === 'dark') {

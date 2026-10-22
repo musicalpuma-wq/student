@@ -123,7 +123,7 @@ function getPerformanceMeta(avg, lang = 'es') {
   return {
     level: 'bajo',
     badge: isEs ? '🚨 Bajo Rendimiento (< 3.0)' : '🚨 Low Performance (< 3.0)',
-    emoji: avg < 2.0 ? '😡' : '😢',
+    emoji: avg < 2.0 ? '😳' : '😢',
     mascotClass: avg < 2.0 ? 'mascot-fail' : 'mascot-poor',
     color: '#ff3b30',
     glowColor: 'rgba(255, 59, 48, 0.36)',

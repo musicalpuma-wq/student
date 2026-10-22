@@ -1,4 +1,5 @@
 import { DataStore } from '../services/DataStore';
+import { BOGOTA_TIMEZONE } from './dateUtils';
 
 /*
  * Shared helpers for the Tools-page games (SpaceGame, TetrisGame).
@@ -37,5 +38,10 @@ export const buildStaffDirectors = () =>
 export const formatRecordDate = (iso, language) => {
     const d = new Date(iso);
     if (isNaN(d)) return '';
-    return d.toLocaleDateString(language === 'en' ? 'en-US' : 'es-CO', { day: 'numeric', month: 'short', year: 'numeric' });
+    return d.toLocaleDateString(language === 'en' ? 'en-US' : 'es-CO', {
+        timeZone: BOGOTA_TIMEZONE,
+        day: 'numeric',
+        month: 'short',
+        year: 'numeric'
+    });
 };
